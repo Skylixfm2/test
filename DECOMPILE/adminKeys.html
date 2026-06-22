@@ -9,7 +9,7 @@
     .keys-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin: 28px 0; flex-wrap: wrap; }
     .keys-head h1 { margin: 0; font-size: clamp(2.2rem, 5vw, 4.4rem); }
     .keys-grid { display: grid; gap: 18px; }
-    .keys-form { display: grid; grid-template-columns: minmax(220px, 390px) 150px auto; gap: 12px; align-items: end; max-width: 760px; }
+    .keys-form { display: grid; grid-template-columns: minmax(220px, 330px) 210px 130px auto; gap: 12px; align-items: end; max-width: 900px; }
     .keys-form label { display: grid; gap: 8px; color: #98a6ba; font-weight: 900; font-size: 0.82rem; text-transform: uppercase; }
     .keys-form button { width: 180px; justify-self: start; }
     .keys-board { display: grid; gap: 10px; }
@@ -55,6 +55,9 @@
         <div class="keys-form">
           <label>Produit
             <select id="keyProduct" class="account-input"></select>
+          </label>
+          <label>Type
+            <input id="keyType" class="account-input" type="text" value="MadeIcon" placeholder="ex: MadeIcon">
           </label>
           <label>Nombre
             <input id="keyAmount" class="account-input" type="number" min="1" max="500" value="10">
@@ -143,19 +146,34 @@
       return key;
     }
 
+    function normalizeKeyType(type) {
+      return String(type || "Key")
+        .trim()
+        .replace(/[^A-Za-z0-9-]/g, "")
+        .slice(0, 24) || "Key";
+    }
+
+    function fullKey(entry) {
+      const type = normalizeKeyType(entry.type || "Key");
+      const rawKey = String(entry.key || "");
+      return rawKey.includes("_") ? rawKey : `${type}_${rawKey}`;
+    }
+
     function generateKeys() {
       if (!isAdmin()) return;
       const productId = document.querySelector("#keyProduct").value;
+      const type = normalizeKeyType(document.querySelector("#keyType").value);
       const amount = Math.min(500, Math.max(1, Number(document.querySelector("#keyAmount").value || 1)));
       if (!productId) {
         alert("Choisis un produit.");
         return;
       }
       const keys = getKeys();
-      const existing = new Set(keys.map((entry) => entry.key));
+      const existing = new Set(keys.flatMap((entry) => [entry.key, fullKey(entry)]));
       const created = Array.from({ length: amount }, () => ({
         id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
         productId,
+        type,
         key: createKey(existing),
         status: "available",
         orderId: "",
@@ -179,7 +197,7 @@
     }
 
     function exportKeys() {
-      const data = JSON.stringify(getKeys(), null, 2);
+      const data = JSON.stringify(getKeys().map((entry) => ({ ...entry, fullKey: fullKey(entry) })), null, 2);
       const blob = new Blob([data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -212,10 +230,10 @@
       board.innerHTML = keys.map((entry) => `
         <article class="key-card">
           <div>
-            <div class="key-code">${entry.key}</div>
-            <div class="key-meta">${products.get(entry.productId) || entry.productId} | ${entry.status}${entry.orderId ? ` | ${entry.orderId}` : ""}</div>
+            <div class="key-code">${fullKey(entry)}</div>
+            <div class="key-meta">${products.get(entry.productId) || entry.productId} | type: ${normalizeKeyType(entry.type || "Key")} | ${entry.status}${entry.orderId ? ` | ${entry.orderId}` : ""}</div>
           </div>
-          <button class="ghost-button" type="button" onclick="copyKey('${entry.key}')">Copier</button>
+          <button class="ghost-button" type="button" onclick="copyKey('${fullKey(entry)}')">Copier</button>
           <button class="ghost-button" type="button" onclick="deleteKey('${entry.id}')">Supprimer</button>
         </article>
       `).join("");

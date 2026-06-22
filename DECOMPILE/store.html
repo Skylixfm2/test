@@ -20,6 +20,9 @@
     .store-hero h1 { font-size: clamp(2.4rem, 5vw, 4.7rem); }
 
     .store-layout { display: grid; gap: 24px; align-items: start; }
+    .shop-type-nav { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+    .shop-type-button { min-width: 112px; min-height: 42px; padding: 10px 16px; border-radius: 999px; border: 1px solid rgba(65, 149, 217, 0.34); background: rgba(9, 17, 39, 0.72); color: #dce5ff; font-weight: 900; box-shadow: none; }
+    .shop-type-button.active { background: linear-gradient(135deg, #50d4d2, #5d85ff); color: #06101f; border-color: transparent; }
     .mail-login { display: flex; align-items: end; justify-content: space-between; gap: 14px; padding: 16px; border-radius: 12px; background: rgba(9, 17, 39, 0.88); border: 1px solid rgba(0, 178, 255, 0.22); flex-wrap: wrap; }
     .mail-login strong { display: block; color: #ffffff; }
     .mail-login span { color: #aab5c8; font-size: 0.92rem; }
@@ -109,6 +112,11 @@
     <section class="store-top">
       <section class="hero store-hero">
         <h1>Boutique</h1>
+        <div class="shop-type-nav" aria-label="Categories boutique">
+          <button class="shop-type-button active" type="button" data-shop-filter="all">Tous</button>
+          <button class="shop-type-button" type="button" data-shop-filter="key">Keys</button>
+          <button class="shop-type-button" type="button" data-shop-filter="file">Fichiers</button>
+        </div>
       </section>
     </section>
 
@@ -215,6 +223,7 @@
     const products = getProducts();
     let selectedProduct = null;
     let selectedPaymentProvider = "Roblox";
+    let activeShopFilter = "all";
 
     function normalizeEmail(email) {
       return String(email || "").trim().toLowerCase();
@@ -281,7 +290,10 @@
     }
 
     function renderProducts() {
-      document.querySelector("#productGrid").innerHTML = products.map(product => `
+      const visibleProducts = activeShopFilter === "all"
+        ? products
+        : products.filter((product) => (product.fulfillment || "file") === activeShopFilter);
+      document.querySelector("#productGrid").innerHTML = visibleProducts.map(product => `
         <article class="panel product-card ${isOutOfStock(product) ? "is-out" : ""}">
           <div class="product-art"><span class="product-badge">W</span></div>
           <div class="product-body">
@@ -293,7 +305,7 @@
             <button class="buy-button" type="button" onclick="buyProduct('${product.id}')" ${isOutOfStock(product) ? "disabled" : ""}>${isOutOfStock(product) ? "Rupture de stock" : "Acheter"}</button>
           </div>
         </article>
-      `).join("");
+      `).join("") || `<section class="panel empty-orders">Aucun produit dans cette categorie.</section>`;
     }
 
     function isOutOfStock(product) {
@@ -606,6 +618,15 @@
     document.querySelector("#transactionProof").addEventListener("change", () => updateProofFileName("#transactionProof", "#transactionProofName"));
     document.querySelector("#gamepassProof").addEventListener("change", () => updateProofFileName("#gamepassProof", "#gamepassProofName"));
     document.querySelector("#proofForm").addEventListener("submit", submitProof);
+    document.querySelectorAll("[data-shop-filter]").forEach((button) => {
+      button.addEventListener("click", () => {
+        activeShopFilter = button.dataset.shopFilter || "all";
+        document.querySelectorAll("[data-shop-filter]").forEach((item) => {
+          item.classList.toggle("active", item === button);
+        });
+        renderProducts();
+      });
+    });
     renderProducts();
   </script>
 </body>

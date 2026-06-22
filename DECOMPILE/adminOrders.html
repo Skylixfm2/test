@@ -100,6 +100,19 @@
       localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
     }
 
+    function normalizeKeyType(type) {
+      return String(type || "Key")
+        .trim()
+        .replace(/[^A-Za-z0-9-]/g, "")
+        .slice(0, 24) || "Key";
+    }
+
+    function fullKey(entry) {
+      const type = normalizeKeyType(entry.type || "Key");
+      const rawKey = String(entry.key || "");
+      return rawKey.includes("_") ? rawKey : `${type}_${rawKey}`;
+    }
+
     function assignKeysToOrder(order) {
       const product = (order.products || [])[0] || {};
       if (product.fulfillment !== "key" && product.id !== "codes") return order;
@@ -119,7 +132,7 @@
         : entry));
       return {
         ...order,
-        assignedKeys: available.map((entry) => entry.key)
+        assignedKeys: available.map((entry) => fullKey(entry))
       };
     }
 
