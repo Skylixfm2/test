@@ -200,7 +200,14 @@
       { id: "premium", name: "Premium Pack", price: 9.99, robuxPrice: 1000, stock: "118 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
       { id: "ultimate", name: "Ultimate Pack", price: 19.99, robuxPrice: 1000, stock: "3 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
       { id: "starter", name: "Starter Bundle", price: 1.65, robuxPrice: 1000, stock: "221 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
-      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" }
+      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
+      { id: "daily-key", name: "Daily Key", price: 2.99, robuxPrice: 400, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
+      { id: "weekly-key", name: "Weekly Key", price: 7.99, robuxPrice: 1200, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
+      { id: "monthly-key", name: "Monthly Key", price: 14.99, robuxPrice: 2500, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
+      { id: "lifetime-key", name: "Lifetime Key", price: 29.99, robuxPrice: 5000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
+      { id: "bundle-keys", name: "Bundle 5 Keys", price: 11.99, robuxPrice: 1800, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: true, fulfillment: "key" },
+      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "file" },
+      { id: "source-pack", name: "Source Pack", price: 12.99, robuxPrice: 1900, stock: "40 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "file" }
     ];
 
     const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
@@ -261,8 +268,11 @@
             allowMultiple: Boolean(product.allowMultiple)
             };
           });
-          localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(normalized));
-          return normalized;
+          const existingIds = new Set(normalized.map((product) => product.id));
+          const missingDefaults = defaultProducts.filter((product) => !existingIds.has(product.id));
+          const merged = [...normalized, ...missingDefaults];
+          localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(merged));
+          return merged;
         }
       } catch {
       }

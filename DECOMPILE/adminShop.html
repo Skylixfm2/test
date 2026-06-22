@@ -9,18 +9,21 @@
     .admin-shop-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin: 28px 0; flex-wrap: wrap; }
     .admin-shop-head h1 { margin: 0; font-size: clamp(2.2rem, 5vw, 4.4rem); }
     .admin-shop-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
-    .admin-shop-board { display: grid; gap: 12px; }
+    .admin-shop-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 12px; align-items: start; }
     .admin-order-search { display: flex; gap: 10px; margin: 0 0 14px; flex-wrap: wrap; }
     .admin-order-search input { flex: 1 1 280px; min-height: 44px; }
     .admin-shop-card { display: grid; gap: 12px; padding: 16px; border-radius: 12px; background: rgba(10, 18, 35, 0.92) !important; border: 1px solid rgba(97, 240, 255, 0.16); color: #f7fbff; }
     .admin-shop-top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .admin-shop-card p { color: #aab5c8; }
+    .admin-shop-help { margin: 0 0 14px; color: #aab5c8; line-height: 1.45; }
     .admin-shop-id { color: #61f0ff; font-family: Consolas, "Cascadia Code", monospace; overflow-wrap: anywhere; }
-    .admin-shop-form { display: grid; grid-template-columns: 130px 1fr; gap: 10px; align-items: center; }
+    .admin-shop-form { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; align-items: center; }
     .admin-shop-form label { color: #98a6ba; font-weight: 900; font-size: 0.82rem; text-transform: uppercase; }
     .admin-shop-check { display: flex; align-items: center; gap: 10px; color: #dce5ff; font-weight: 900; }
     .admin-shop-form .account-input { background: rgba(5, 9, 18, 0.82) !important; border: 1px solid rgba(97, 240, 255, 0.2) !important; color: #f7fbff !important; }
     .admin-shop-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .admin-shop-actions button,
+    .admin-shop-actions .ghost-button { flex: 0 0 auto; min-width: 132px; }
     .status-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 6px 10px; border-radius: 999px; font-weight: 900; }
     .status-pending { background: rgba(255, 209, 47, 0.16); color: #ffd12f; }
     .status-accepted { background: rgba(74, 255, 173, 0.14); color: #4affa8; }
@@ -57,6 +60,7 @@
           <h2>Nouveau produit</h2>
           <span class="history-pill">shop</span>
         </div>
+        <p class="admin-shop-help">Pour vendre des keys : cree un produit, coche "Produit de type key", puis va dans Admin Keys pour generer les keys.</p>
         <div class="admin-shop-card">
           <div class="admin-shop-form">
             <label>Nom</label>
@@ -113,7 +117,14 @@
       { id: "premium", name: "Premium Pack", price: 9.99, robuxPrice: 1000, stock: "118 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false },
       { id: "ultimate", name: "Ultimate Pack", price: 19.99, robuxPrice: 1000, stock: "3 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false },
       { id: "starter", name: "Starter Bundle", price: 1.65, robuxPrice: 1000, stock: "221 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false },
-      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" }
+      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" },
+      { id: "daily-key", name: "Daily Key", price: 2.99, robuxPrice: 400, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" },
+      { id: "weekly-key", name: "Weekly Key", price: 7.99, robuxPrice: 1200, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" },
+      { id: "monthly-key", name: "Monthly Key", price: 14.99, robuxPrice: 2500, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" },
+      { id: "lifetime-key", name: "Lifetime Key", price: 29.99, robuxPrice: 5000, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" },
+      { id: "bundle-keys", name: "Bundle 5 Keys", price: 11.99, robuxPrice: 1800, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: true, fulfillment: "key" },
+      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "file" },
+      { id: "source-pack", name: "Source Pack", price: 12.99, robuxPrice: 1900, stock: "40 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "file" }
     ];
 
     function isAdmin() {
@@ -126,7 +137,7 @@
         const parsed = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "null");
         if (Array.isArray(parsed) && parsed.length) {
           const defaultsById = new Map(defaultProducts.map((product) => [product.id, product]));
-          return parsed.map((product) => {
+          const normalized = parsed.map((product) => {
             const fallback = defaultsById.get(product.id) || {};
             return {
             ...fallback,
@@ -138,6 +149,11 @@
             allowMultiple: Boolean(product.allowMultiple)
             };
           });
+          const existingIds = new Set(normalized.map((product) => product.id));
+          const missingDefaults = defaultProducts.filter((product) => !existingIds.has(product.id));
+          const merged = [...normalized, ...missingDefaults];
+          localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(merged));
+          return merged;
         }
       } catch {
       }
@@ -247,7 +263,7 @@
           <div class="admin-shop-actions">
             <button type="button" onclick="saveProduct('${product.id}')">Sauvegarder</button>
             <button class="ghost-button" type="button" onclick="deleteProduct('${product.id}')">Supprimer</button>
-            ${product.fulfillment === "key" ? `<a class="ghost-button" href="adminKeys.html?product=${encodeURIComponent(product.id)}">Keys</a>` : ""}
+            ${product.fulfillment === "key" ? `<a class="ghost-button" href="adminKeys.html?product=${encodeURIComponent(product.id)}">Gerer les keys</a>` : ""}
           </div>
         </article>
       `).join("");

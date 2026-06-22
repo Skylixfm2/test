@@ -9,12 +9,14 @@
     .keys-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin: 28px 0; flex-wrap: wrap; }
     .keys-head h1 { margin: 0; font-size: clamp(2.2rem, 5vw, 4.4rem); }
     .keys-grid { display: grid; gap: 18px; }
-    .keys-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
+    .keys-form { display: grid; grid-template-columns: minmax(220px, 390px) 150px auto; gap: 12px; align-items: end; max-width: 760px; }
     .keys-form label { display: grid; gap: 8px; color: #98a6ba; font-weight: 900; font-size: 0.82rem; text-transform: uppercase; }
+    .keys-form button { width: 180px; justify-self: start; }
     .keys-board { display: grid; gap: 10px; }
     .key-card { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 14px; border-radius: 12px; background: rgba(10, 18, 35, 0.92); border: 1px solid rgba(97, 240, 255, 0.16); color: #f7fbff; }
     .key-code { color: #61f0ff; font-family: Consolas, "Cascadia Code", monospace; font-weight: 900; overflow-wrap: anywhere; }
     .key-meta { color: #98a6ba; font-size: 0.9rem; }
+    .keys-help { margin: 0 0 14px; color: #aab5c8; line-height: 1.45; }
     .access-denied, .empty-keys { padding: 22px; color: #98a6ba; }
     @media (max-width: 760px) {
       .keys-form, .key-card { grid-template-columns: 1fr; }
@@ -49,6 +51,7 @@
           <h2>Generer des keys</h2>
           <span id="keysCount" class="history-pill">0 keys</span>
         </div>
+        <p class="keys-help">C'est ici que tu mets les keys : choisis un produit de type key, mets le nombre, puis clique sur Generer.</p>
         <div class="keys-form">
           <label>Produit
             <select id="keyProduct" class="account-input"></select>
@@ -181,7 +184,8 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "lusive-keys.json";
+      const count = getKeys().length;
+      link.download = `${count}-key.json`;
       link.click();
       URL.revokeObjectURL(url);
     }
