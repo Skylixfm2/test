@@ -20,6 +20,17 @@
   display: none !important;
 }
 
+body:not(.is-admin) a[href="admin.html"],
+body:not(.is-admin) a[href="adminOrders.html"],
+body:not(.is-admin) a[href="adminShop.html"],
+body:not(.is-admin) [data-admin-only],
+body:not(.is-admin) .admin-button,
+body:not(.is-admin) .account-group-admin,
+body:not(.is-admin) #adminLoginButton,
+body:not(.is-admin) #adminNavLink {
+  display: none !important;
+}
+
 html,
 body {
   max-width: 100%;
@@ -64,6 +75,37 @@ body {
   border: 1px solid rgba(0, 178, 255, 0.22);
   color: #f7fbff;
   flex-wrap: wrap;
+}
+
+.gmail-auth.is-connected {
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.gmail-account-chip {
+  display: grid;
+  gap: 2px;
+  min-width: 190px;
+  padding: 10px 14px;
+  border: 1px solid rgba(97, 240, 255, 0.25);
+  border-radius: 12px;
+  background: rgba(9, 17, 39, 0.9);
+  color: #f7fbff;
+  text-align: right;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+}
+
+.gmail-account-chip strong {
+  color: #ffffff;
+}
+
+.gmail-account-chip span {
+  color: #aab5c8;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
 }
 
 .gmail-auth-copy {

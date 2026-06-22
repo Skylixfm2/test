@@ -3,6 +3,9 @@ const ACCOUNTS_STORAGE_KEY = "luau-community-accounts";
 const SESSION_STORAGE_KEY = "luau-community-session";
 const ADMIN_PIN_STORAGE_KEY = "luau-admin-pin-reset-20260622";
 const ADMIN_UNLOCK_STORAGE_KEY = "luau-admin-unlocked-reset-20260622";
+const ADMIN_EMAIL = "solarydigix@gmail.com";
+const CUSTOMER_EMAIL_STORAGE_KEY = "lusive-customer-email";
+const EMAIL_VERIFIED_STORAGE_KEY = "lusive-email-verified";
 const THEME_STORAGE_KEY = "luau-script-theme";
 const STORE_PRODUCTS_KEY = "lusive-store-products";
 const MAX_USER_ACCOUNTS = 2;
@@ -237,8 +240,8 @@ function findAccount(username) {
 }
 
 function getCurrentAccount() {
-  return isAdminUnlocked()
-    ? { username: "admin", password: "", role: "admin", banned: false }
+  return canAccessAdminPanel()
+    ? { username: localStorage.getItem("lusive-customer-pseudo") || "admin", password: "", role: "admin", banned: false }
     : { username: "guest", password: "", role: "user", banned: false };
 }
 
@@ -277,7 +280,8 @@ function showToast(message) {
 }
 
 function canAccessAdminPanel() {
-  return isAdminUnlocked();
+  return localStorage.getItem(EMAIL_VERIFIED_STORAGE_KEY) === "true"
+    && String(localStorage.getItem(CUSTOMER_EMAIL_STORAGE_KEY) || "").trim().toLowerCase() === ADMIN_EMAIL;
 }
 
 function renderAccountBar() {
@@ -289,7 +293,7 @@ function renderAccountBar() {
   if (ui.adminHint) {
     ui.adminHint.hidden = !isVisibleAdmin;
   }
-  if (ui.adminLoginButton) ui.adminLoginButton.hidden = isAdminUnlocked();
+  if (ui.adminLoginButton) ui.adminLoginButton.hidden = true;
   if (ui.adminNavLink) {
     ui.adminNavLink.hidden = !isVisibleAdmin;
   }
@@ -682,5 +686,13 @@ document.addEventListener("click", (event) => {
 setTheme(getTheme());
 renderAccountBar();
 renderAdminPanel();
+window.addEventListener("gmail-auth-change", () => {
+  renderAccountBar();
+  renderAdminPanel();
+});
+window.addEventListener("storage", () => {
+  renderAccountBar();
+  renderAdminPanel();
+});
 
 

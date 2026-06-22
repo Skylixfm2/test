@@ -131,7 +131,8 @@
           </div>
           <div class="order-meta">
             <div><span>Pseudo compte</span>${order.customerPseudo || "-"}</div>
-            <div><span>Email</span>${order.customerEmail || "-"}</div>
+            <div><span>Email compte</span>${order.customerEmail || "-"}</div>
+            <div><span>Email commande</span>${order.contactEmail || "-"}</div>
             <div><span>Total</span>${order.totalLabel || money.format(Number(order.total || 0))}</div>
             <div><span>Paiement</span>${order.provider || "-"}</div>
           </div>

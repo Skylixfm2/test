@@ -2,18 +2,12 @@
   const keys = [
     "lusive-customer-email",
     "lusive-customer-pseudo",
-    "lusive-customer-phone",
     "lusive-email-verified",
-    "lusive-phone-verified",
-    "lusive-firebase-uid",
-    "lusive-firebase-pending-email",
-    "lusive-pending-email-code",
-    "lusive-pending-phone-code"
+    "lusive-firebase-uid"
   ];
 
   function resetAuth() {
     keys.forEach((key) => localStorage.removeItem(key));
-    sessionStorage.removeItem("lusive-firebase-phone-verification");
     location.reload();
   }
 

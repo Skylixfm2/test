@@ -13,6 +13,7 @@ const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
 const CUSTOMER_PSEUDO_KEY = "lusive-customer-pseudo";
 const EMAIL_VERIFIED_KEY = "lusive-email-verified";
 const FIREBASE_UID_KEY = "lusive-firebase-uid";
+const ADMIN_EMAIL = "solarydigix@gmail.com";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAb7KDEVZQsCGFtwpFIx1vtjLYFArOhwMI",
@@ -55,7 +56,20 @@ function isFullyVerified() {
   return isEmailVerified();
 }
 
+function isAdmin() {
+  return isFullyVerified() && getCustomerEmail() === ADMIN_EMAIL;
+}
+
+function updateAdminVisibility() {
+  const allowed = isAdmin();
+  document.body.classList.toggle("is-admin", allowed);
+  document.querySelectorAll("[data-admin-only], a[href='admin.html'], a[href='adminOrders.html'], a[href='adminShop.html']").forEach((element) => {
+    element.hidden = !allowed;
+  });
+}
+
 function dispatchAuthChange() {
+  updateAdminVisibility();
   window.dispatchEvent(new Event("gmail-auth-change"));
 }
 
@@ -89,16 +103,34 @@ function renderGmailAuth() {
   const pseudo = getCustomerPseudo();
 
   containers.forEach((container) => {
+    if (isFullyVerified()) {
+      const displayName = pseudo || email.split("@")[0];
+      container.classList.add("is-connected");
+      container.innerHTML = `
+        <div class="gmail-account-chip" aria-label="Compte connecte">
+          <strong>${displayName}</strong>
+          <span>${email}</span>
+        </div>
+        <button class="ghost-button gmail-auth-logout" type="button">Deconnexion</button>
+      `;
+
+      container.querySelector(".gmail-auth-logout").addEventListener("click", () => {
+        clearCustomerEmail();
+        renderGmailAuth();
+      });
+      return;
+    }
+
+    container.classList.remove("is-connected");
     container.innerHTML = `
       <div class="gmail-auth-copy">
-        <strong>${isFullyVerified() ? `Verifie : ${email}` : "Connexion Firebase"}</strong>
+        <strong>Connexion Firebase</strong>
         <span>Connexion avec ton compte Google.</span>
       </div>
       <form class="gmail-auth-form">
         <input class="gmail-pseudo-input" type="text" value="${pseudo}" placeholder="Pseudo" autocomplete="nickname" maxlength="32">
         <input class="gmail-email-input" type="email" value="${email}" placeholder="Compte Google" autocomplete="email" disabled>
-        <button class="gmail-send-email" type="button">${isEmailVerified() ? "Google OK" : "Connexion Google"}</button>
-        <button class="ghost-button gmail-auth-logout" type="button" ${email ? "" : "hidden"}>Deconnexion</button>
+        <button class="gmail-send-email" type="button">Connexion Google</button>
         <div class="gmail-auth-codes"></div>
         <div class="gmail-auth-error"></div>
       </form>
@@ -136,22 +168,19 @@ function renderGmailAuth() {
       container.querySelector(".gmail-send-email").click();
     });
 
-    container.querySelector(".gmail-auth-logout").addEventListener("click", () => {
-      clearCustomerEmail();
-      renderGmailAuth();
-    });
   });
+
+  updateAdminVisibility();
 }
 
 window.gmailAuth = {
   getEmail: getCustomerEmail,
   getPseudo: getCustomerPseudo,
-  getPhone: () => "",
   clearEmail: clearCustomerEmail,
   isValid: isValidGmail,
   isEmailVerified,
-  isPhoneVerified: () => true,
   isFullyVerified,
+  isAdmin,
   render: renderGmailAuth
 };
 
@@ -169,5 +198,11 @@ onAuthStateChanged(auth, (user) => {
   renderGmailAuth();
   dispatchAuthChange();
 });
-document.addEventListener("DOMContentLoaded", renderGmailAuth);
-window.addEventListener("storage", renderGmailAuth);
+document.addEventListener("DOMContentLoaded", () => {
+  renderGmailAuth();
+  updateAdminVisibility();
+});
+window.addEventListener("storage", () => {
+  renderGmailAuth();
+  updateAdminVisibility();
+});

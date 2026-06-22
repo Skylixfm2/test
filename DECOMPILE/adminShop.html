@@ -65,8 +65,9 @@
   <script src="auth-fallback.js"></script>
   <script>
     const STORE_PRODUCTS_KEY = "lusive-store-products";
-    const SESSION_STORAGE_KEY = "luau-community-session";
-    const ADMIN_UNLOCK_KEYS = ["luau-admin-unlocked-reset-20260622", "luau-admin-unlocked"];
+    const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
+    const EMAIL_VERIFIED_KEY = "lusive-email-verified";
+    const ADMIN_EMAIL = "solarydigix@gmail.com";
     const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 
     const defaultRobloxLink = "https://www.roblox.com/fr/game-pass/1862510568/1000";
@@ -80,7 +81,8 @@
     ];
 
     function isAdmin() {
-      return ADMIN_UNLOCK_KEYS.some((key) => localStorage.getItem(key) === "true");
+      return localStorage.getItem(EMAIL_VERIFIED_KEY) === "true"
+        && String(localStorage.getItem(CUSTOMER_EMAIL_KEY) || "").trim().toLowerCase() === ADMIN_EMAIL;
     }
 
     function getProducts() {
@@ -107,6 +109,7 @@
     }
 
     function saveProduct(id) {
+      if (!isAdmin()) return;
       const products = getProducts().map((product) => {
         if (product.id !== id) return product;
         return {
@@ -124,6 +127,7 @@
     }
 
     function renderProducts() {
+      if (!isAdmin()) return;
       const products = getProducts();
       document.querySelector("#productsCount").textContent = `${products.length} product${products.length === 1 ? "" : "s"}`;
       document.querySelector("#productsBoard").innerHTML = products.map((product) => `
@@ -165,6 +169,8 @@
     }
 
     renderAdminShop();
+    window.addEventListener("gmail-auth-change", renderAdminShop);
+    window.addEventListener("storage", renderAdminShop);
   </script>
 </body>
 </html>

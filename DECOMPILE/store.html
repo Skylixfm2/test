@@ -69,7 +69,8 @@
     .proof-field.is-hidden,
     .robux-only.is-hidden { display: none; }
     .proof-field label { color: #9298a8; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
-    .proof-field input[type="text"] { width: 100%; min-height: 42px; border-radius: 10px; border: 1px solid rgba(139, 92, 255, 0.78); background: #151923; color: #ffffff; padding: 0 13px; }
+    .proof-field input[type="text"],
+    .proof-field input[type="email"] { width: 100%; min-height: 42px; border-radius: 10px; border: 1px solid rgba(139, 92, 255, 0.78); background: #151923; color: #ffffff; padding: 0 13px; }
     .proof-field input[type="number"] { width: 100%; min-height: 42px; border-radius: 10px; border: 1px solid rgba(139, 92, 255, 0.78); background: #151923; color: #ffffff; padding: 0 13px; }
     .proof-upload { position: relative; display: grid; place-items: center; min-height: 76px; border: 2px dashed rgba(112, 120, 142, 0.28); border-radius: 11px; background: rgba(255, 255, 255, 0.02); color: #9298a8; cursor: pointer; text-align: center; }
     .proof-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
@@ -136,6 +137,11 @@
         </div>
         <div class="proof-help" id="proofHelp">Tu dois fournir une preuve de transaction et une capture montrant que tu possedes le gamepass.</div>
 
+        <div class="proof-field">
+          <label for="orderContactEmail">Mail de commande</label>
+          <input id="orderContactEmail" name="orderContactEmail" type="email" placeholder="email pour recevoir ta commande" autocomplete="email" required>
+        </div>
+
         <div class="proof-field is-hidden" id="quantityField">
           <label for="purchaseQuantity">Quantite</label>
           <input id="purchaseQuantity" type="number" min="1" value="1">
@@ -184,7 +190,7 @@
     const PURCHASE_COOLDOWN_KEY = "lusive-last-purchase-at";
     const PURCHASE_COOLDOWN_MS = 2.5 * 60 * 60 * 1000;
     const SESSION_STORAGE_KEY = "luau-community-session";
-    const ADMIN_UNLOCK_KEYS = ["luau-admin-unlocked-reset-20260622", "luau-admin-unlocked"];
+    const ADMIN_EMAIL = "solarydigix@gmail.com";
     const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const CUSTOMER_PSEUDO_KEY = "lusive-customer-pseudo";
     const EMAIL_VERIFIED_KEY = "lusive-email-verified";
@@ -221,6 +227,10 @@
     function isCustomerVerified() {
       return Boolean(getCustomerEmail())
         && localStorage.getItem(EMAIL_VERIFIED_KEY) === "true";
+    }
+
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
     }
 
     function setCustomerEmail(email) {
@@ -316,7 +326,7 @@
     }
 
     function isAdmin() {
-      return ADMIN_UNLOCK_KEYS.some((key) => localStorage.getItem(key) === "true");
+      return isCustomerVerified() && getCustomerEmail() === ADMIN_EMAIL;
     }
 
     function getStockCount(product) {
@@ -410,7 +420,8 @@
             { name: "Paiement", value: order.provider, inline: true },
             { name: "Total", value: order.totalLabel || money.format(Number(order.total || 0)), inline: true },
             { name: "Quantite", value: String(order.quantity || 1), inline: true },
-            { name: "Email", value: order.customerEmail || "-", inline: false },
+            { name: "Email compte", value: order.customerEmail || "-", inline: false },
+            { name: "Email commande", value: order.contactEmail || "-", inline: false },
             { name: "Pseudo compte", value: order.customerPseudo || "-", inline: true },
             { name: "Pseudo Roblox", value: order.username || "-", inline: true },
             { name: "Produit", value: productNames, inline: false }
@@ -440,6 +451,7 @@
         status: "pending",
         provider,
         customerEmail: getCustomerEmail(),
+        contactEmail: proof.contactEmail,
         customerPseudo: getCustomerPseudo(),
         username: proof.username,
         quantity: proof.quantity,
@@ -482,6 +494,7 @@
       document.querySelector("#proofOrderResult").innerHTML = "";
       document.querySelector(".proof-submit").disabled = false;
       document.querySelector("#proofService").textContent = selectedProduct.name;
+      document.querySelector("#orderContactEmail").value = "";
       document.querySelector("#purchaseQuantity").value = 1;
       document.querySelector("#proofAmount").textContent = currentTotalLabel();
       const robuxLink = selectedProduct.robloxLink || defaultProducts[0].robloxLink;
@@ -526,12 +539,18 @@
     async function submitProof(event) {
       event.preventDefault();
       const username = document.querySelector("#robloxUsername").value.trim();
+      const contactEmail = normalizeEmail(document.querySelector("#orderContactEmail").value);
       const payment = document.querySelector("input[name='payment']:checked").value;
       const transactionProof = document.querySelector("#transactionProof").files[0];
       const gamepassProof = document.querySelector("#gamepassProof").files[0];
       const isRoblox = payment === "roblox";
       const quantity = isRoblox || !selectedProduct?.allowMultiple ? 1 : getPurchaseQuantity();
       const stockCount = getStockCount(selectedProduct);
+
+      if (!isValidEmail(contactEmail)) {
+        document.querySelector("#proofHelp").textContent = "Entre un mail de commande valide.";
+        return;
+      }
 
       if (!transactionProof || (isRoblox && (!username || !gamepassProof))) {
         document.querySelector("#proofHelp").textContent = isRoblox
@@ -548,6 +567,7 @@
       selectedPaymentProvider = payment === "roblox" ? "Roblox" : payment === "paypal" ? "PayPal" : "carte bancaire";
       await completeOrder(selectedPaymentProvider, {
         username: isRoblox ? username : "",
+        contactEmail,
         quantity,
         payment,
         transactionProofName: transactionProof.name,
