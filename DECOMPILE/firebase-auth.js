@@ -2,9 +2,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/fireba
 import {
   getAuth,
   onAuthStateChanged,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signInWithEmailLink,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   RecaptchaVerifier,
   PhoneAuthProvider,
   linkWithCredential,
@@ -17,7 +18,6 @@ const CUSTOMER_PHONE_KEY = "lusive-customer-phone";
 const EMAIL_VERIFIED_KEY = "lusive-email-verified";
 const PHONE_VERIFIED_KEY = "lusive-phone-verified";
 const FIREBASE_UID_KEY = "lusive-firebase-uid";
-const FIREBASE_PENDING_EMAIL_KEY = "lusive-firebase-pending-email";
 const FIREBASE_PHONE_VERIFICATION_KEY = "lusive-firebase-phone-verification";
 
 const firebaseConfig = {
@@ -31,7 +31,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 let recaptchaVerifier = null;
+
+if (!localStorage.getItem(FIREBASE_UID_KEY)) {
+  localStorage.setItem(EMAIL_VERIFIED_KEY, "false");
+  localStorage.setItem(PHONE_VERIFIED_KEY, "false");
+}
 
 function normalizeGmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -84,28 +90,17 @@ function ensureRecaptcha() {
   return recaptchaVerifier;
 }
 
-async function completeEmailLinkIfNeeded() {
-  if (!isSignInWithEmailLink(auth, window.location.href)) return;
-  const email = localStorage.getItem(FIREBASE_PENDING_EMAIL_KEY) || window.prompt("Entre ton Gmail pour confirmer le lien :");
-  if (!email) return;
-  const credential = await signInWithEmailLink(auth, normalizeGmail(email), window.location.href);
-  localStorage.setItem(CUSTOMER_EMAIL_KEY, normalizeGmail(credential.user.email));
-  localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
-  localStorage.setItem(FIREBASE_UID_KEY, credential.user.uid);
-  localStorage.removeItem(FIREBASE_PENDING_EMAIL_KEY);
-  history.replaceState({}, document.title, location.pathname);
-  dispatchAuthChange();
-}
-
-async function sendEmailLink(email, pseudo) {
-  localStorage.setItem(CUSTOMER_EMAIL_KEY, normalizeGmail(email));
+async function signInWithGoogle(pseudo) {
   localStorage.setItem(CUSTOMER_PSEUDO_KEY, pseudo);
-  localStorage.setItem(EMAIL_VERIFIED_KEY, "false");
-  localStorage.setItem(FIREBASE_PENDING_EMAIL_KEY, normalizeGmail(email));
-  await sendSignInLinkToEmail(auth, normalizeGmail(email), {
-    url: window.location.href.split("#")[0],
-    handleCodeInApp: true
-  });
+  try {
+    return await signInWithPopup(auth, googleProvider);
+  } catch (error) {
+    if (error.code === "auth/popup-blocked" || error.code === "auth/popup-closed-by-user") {
+      await signInWithRedirect(auth, googleProvider);
+      return null;
+    }
+    throw error;
+  }
 }
 
 async function sendPhoneCode(phone) {
@@ -135,7 +130,6 @@ function clearCustomerEmail() {
   localStorage.removeItem(EMAIL_VERIFIED_KEY);
   localStorage.removeItem(PHONE_VERIFIED_KEY);
   localStorage.removeItem(FIREBASE_UID_KEY);
-  localStorage.removeItem(FIREBASE_PENDING_EMAIL_KEY);
   sessionStorage.removeItem(FIREBASE_PHONE_VERIFICATION_KEY);
   signOut(auth).catch(() => {});
   dispatchAuthChange();
@@ -153,12 +147,12 @@ function renderGmailAuth() {
     container.innerHTML = `
       <div class="gmail-auth-copy">
         <strong>${isFullyVerified() ? `Verifie : ${email}` : "Connexion Firebase"}</strong>
-        <span>Gmail par lien Firebase + telephone par SMS Firebase.</span>
+        <span>Connexion Google + telephone par SMS Firebase.</span>
       </div>
       <form class="gmail-auth-form">
         <input class="gmail-pseudo-input" type="text" value="${pseudo}" placeholder="Pseudo" autocomplete="nickname" maxlength="32">
-        <input class="gmail-email-input" type="email" value="${email}" placeholder="tonadresse@gmail.com" autocomplete="email">
-        <button class="gmail-send-email" type="button">${isEmailVerified() ? "Email OK" : "Envoyer lien email"}</button>
+        <input class="gmail-email-input" type="email" value="${email}" placeholder="Compte Google" autocomplete="email" disabled>
+        <button class="gmail-send-email" type="button">${isEmailVerified() ? "Google OK" : "Connexion Google"}</button>
         <input class="gmail-phone-input" type="tel" value="${phone}" placeholder="+33612345678" autocomplete="tel">
         <button class="gmail-send-phone" type="button">${isPhoneVerified() ? "Tel OK" : "Envoyer SMS"}</button>
         <input class="gmail-phone-code" type="text" inputmode="numeric" maxlength="6" placeholder="Code SMS">
@@ -181,20 +175,21 @@ function renderGmailAuth() {
       error.textContent = "";
       status.textContent = "";
       const nextPseudo = pseudoInput.value.trim();
-      const nextEmail = normalizeGmail(emailInput.value);
       if (nextPseudo.length < 2) {
         error.textContent = "Choisis un pseudo.";
         return;
       }
-      if (!isValidGmail(nextEmail)) {
-        error.textContent = "Entre une adresse Gmail valide.";
-        return;
-      }
       try {
-        await sendEmailLink(nextEmail, nextPseudo);
-        status.textContent = "Lien envoye par email. Ouvre le lien recu pour valider.";
+        const result = await signInWithGoogle(nextPseudo);
+        if (result?.user?.email) {
+          localStorage.setItem(CUSTOMER_EMAIL_KEY, normalizeGmail(result.user.email));
+          localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
+          localStorage.setItem(FIREBASE_UID_KEY, result.user.uid);
+          status.textContent = "Compte Google connecte.";
+          renderGmailAuth();
+        }
       } catch (err) {
-        error.textContent = `Erreur Firebase email: ${err.code || err.message}`;
+        error.textContent = `Erreur Firebase Google: ${err.code || err.message}`;
       }
     });
 
@@ -266,7 +261,7 @@ window.gmailAuth = {
   render: renderGmailAuth
 };
 
-completeEmailLinkIfNeeded().catch((error) => console.warn("Firebase email link error", error));
+getRedirectResult(auth).catch((error) => console.warn("Firebase redirect error", error));
 onAuthStateChanged(auth, (user) => {
   if (user?.email) {
     localStorage.setItem(CUSTOMER_EMAIL_KEY, normalizeGmail(user.email));
