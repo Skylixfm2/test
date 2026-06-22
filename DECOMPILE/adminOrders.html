@@ -34,6 +34,7 @@
       <a class="page-link" href="orders.html">My Orders</a>
       <a class="page-link active" href="adminOrders.html">Admin Orders</a>
       <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link" href="adminKeys.html">Admin Keys</a>
       <a class="page-link" href="admin.html">Admin</a>
     </nav>
     <section class="gmail-auth" data-gmail-auth></section>
@@ -46,7 +47,7 @@
       <span id="accessBadge" class="history-pill">verification</span>
     </section>
 
-    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis. Va sur la page Admin, unlock admin, puis reviens ici.</section>
+    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis. Connecte-toi avec le Gmail admin.</section>
 
     <section id="adminOrdersPanel" hidden>
       <div class="admin-order-search">
@@ -61,6 +62,7 @@
   <script src="auth-fallback.js"></script>
   <script>
     const STORE_ORDERS_KEY = "lusive-store-orders";
+    const STORE_KEYS_KEY = "lusive-store-keys";
     const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const EMAIL_VERIFIED_KEY = "lusive-email-verified";
     const ADMIN_EMAIL = "solarydigix@gmail.com";
@@ -85,9 +87,50 @@
       localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
     }
 
+    function getKeys() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_KEYS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveKeys(keys) {
+      localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+    }
+
+    function assignKeysToOrder(order) {
+      const product = (order.products || [])[0] || {};
+      if (product.fulfillment !== "key" && product.id !== "codes") return order;
+      if (Array.isArray(order.assignedKeys) && order.assignedKeys.length) return order;
+
+      const quantity = Math.max(1, Number(order.quantity || product.quantity || 1));
+      const keys = getKeys();
+      const available = keys.filter((entry) => entry.productId === product.id && entry.status === "available").slice(0, quantity);
+      if (available.length < quantity) {
+        alert(`Pas assez de keys disponibles pour ${product.name || product.id}.`);
+        return null;
+      }
+
+      const assignedKeyIds = new Set(available.map((entry) => entry.id));
+      saveKeys(keys.map((entry) => assignedKeyIds.has(entry.id)
+        ? { ...entry, status: "used", orderId: order.id, usedAt: new Date().toISOString() }
+        : entry));
+      return {
+        ...order,
+        assignedKeys: available.map((entry) => entry.key)
+      };
+    }
+
     function setOrderStatus(id, status) {
       if (!isAdmin()) return;
-      saveOrders(getOrders().map((order) => order.id === id ? { ...order, status, reviewedAt: new Date().toISOString() } : order));
+      saveOrders(getOrders().map((order) => {
+        if (order.id !== id) return order;
+        const nextOrder = status === "accepted" ? assignKeysToOrder(order) : order;
+        if (!nextOrder) return order;
+        return { ...nextOrder, status, reviewedAt: new Date().toISOString() };
+      }));
       renderOrders();
     }
 
@@ -132,6 +175,7 @@
           </div>
           <div class="order-meta">
             <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
+            <div><span>Keys livrees</span>${(order.assignedKeys || []).join(", ") || "-"}</div>
             <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>
           </div>
           <div class="order-actions">

@@ -40,6 +40,7 @@
       <a class="page-link active" href="orders.html">My Orders</a>
       <a class="page-link" href="adminOrders.html">Admin Orders</a>
       <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link" href="adminKeys.html">Admin Keys</a>
       <a class="page-link" href="admin.html">Admin</a>
     </nav>
 
@@ -140,6 +141,7 @@
             <div><span>Date</span>${order.createdAt ? new Date(order.createdAt).toLocaleString("fr-FR") : "-"}</div>
             <div><span>Pseudo Roblox</span>${order.username || "-"}</div>
             <div><span>Produits</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
+            <div><span>Keys</span>${order.status === "accepted" ? (order.assignedKeys || []).join(", ") || "-" : "apres acceptation"}</div>
             <div><span>Preuve transaction</span>${order.transactionProofName || "-"}</div>
             <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
             <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>

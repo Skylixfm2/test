@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Keys</title>
+  <link rel="stylesheet" href="styles.css?v=lusive-store">
+  <style>
+    .keys-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin: 28px 0; flex-wrap: wrap; }
+    .keys-head h1 { margin: 0; font-size: clamp(2.2rem, 5vw, 4.4rem); }
+    .keys-grid { display: grid; gap: 18px; }
+    .keys-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
+    .keys-form label { display: grid; gap: 8px; color: #98a6ba; font-weight: 900; font-size: 0.82rem; text-transform: uppercase; }
+    .keys-board { display: grid; gap: 10px; }
+    .key-card { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 14px; border-radius: 12px; background: rgba(10, 18, 35, 0.92); border: 1px solid rgba(97, 240, 255, 0.16); color: #f7fbff; }
+    .key-code { color: #61f0ff; font-family: Consolas, "Cascadia Code", monospace; font-weight: 900; overflow-wrap: anywhere; }
+    .key-meta { color: #98a6ba; font-size: 0.9rem; }
+    .access-denied, .empty-keys { padding: 22px; color: #98a6ba; }
+    @media (max-width: 760px) {
+      .keys-form, .key-card { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="top-nav">
+      <a class="page-link" href="store.html">Shop</a>
+      <a class="page-link" href="orders.html">My Orders</a>
+      <a class="page-link" href="adminOrders.html">Admin Orders</a>
+      <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link active" href="adminKeys.html">Admin Keys</a>
+      <a class="page-link" href="admin.html">Admin</a>
+    </nav>
+    <section class="gmail-auth" data-gmail-auth></section>
+
+    <section class="keys-head">
+      <div>
+        <p class="eyebrow">Generation de keys</p>
+        <h1>Admin Keys</h1>
+      </div>
+      <span id="accessBadge" class="history-pill">verification</span>
+    </section>
+
+    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis.</section>
+
+    <section id="keysPanel" class="keys-grid" hidden>
+      <section class="panel">
+        <div class="share-header">
+          <h2>Generer des keys</h2>
+          <span id="keysCount" class="history-pill">0 keys</span>
+        </div>
+        <div class="keys-form">
+          <label>Produit
+            <select id="keyProduct" class="account-input"></select>
+          </label>
+          <label>Nombre
+            <input id="keyAmount" class="account-input" type="number" min="1" max="500" value="10">
+          </label>
+          <button type="button" onclick="generateKeys()">Generer</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="share-header">
+          <h2>Keys disponibles</h2>
+          <button class="ghost-button" type="button" onclick="exportKeys()">Export JSON</button>
+        </div>
+        <div id="keysBoard" class="keys-board"></div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script>
+    const STORE_PRODUCTS_KEY = "lusive-store-products";
+    const STORE_KEYS_KEY = "lusive-store-keys";
+    const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
+    const EMAIL_VERIFIED_KEY = "lusive-email-verified";
+    const ADMIN_EMAIL = "solarydigix@gmail.com";
+    const defaultProducts = [
+      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: "rewards/[] Adopt Me! (Decompile).rbxl", allowMultiple: false, fulfillment: "key" }
+    ];
+    const params = new URLSearchParams(location.search);
+
+    function isAdmin() {
+      return localStorage.getItem(EMAIL_VERIFIED_KEY) === "true"
+        && String(localStorage.getItem(CUSTOMER_EMAIL_KEY) || "").trim().toLowerCase() === ADMIN_EMAIL;
+    }
+
+    function getProducts() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "[]");
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      } catch {
+      }
+      return defaultProducts;
+    }
+
+    function saveProducts(products) {
+      localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+    }
+
+    function getKeys() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_KEYS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveKeys(keys) {
+      localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+    }
+
+    function syncProductStock(productId) {
+      let savedProducts = [];
+      try {
+        savedProducts = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "[]");
+      } catch {
+        savedProducts = [];
+      }
+      if (!Array.isArray(savedProducts) || !savedProducts.length) return;
+      const availableCount = getKeys().filter((entry) => entry.productId === productId && entry.status === "available").length;
+      saveProducts(savedProducts.map((product) => product.id === productId
+        ? { ...product, stock: availableCount <= 0 ? "Out of stock" : `${availableCount} in stock` }
+        : product));
+    }
+
+    function createKey(existing) {
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let key = "";
+      do {
+        const bytes = new Uint8Array(15);
+        crypto.getRandomValues(bytes);
+        key = Array.from(bytes, (value) => alphabet[value % alphabet.length]).join("");
+      } while (existing.has(key));
+      existing.add(key);
+      return key;
+    }
+
+    function generateKeys() {
+      if (!isAdmin()) return;
+      const productId = document.querySelector("#keyProduct").value;
+      const amount = Math.min(500, Math.max(1, Number(document.querySelector("#keyAmount").value || 1)));
+      if (!productId) {
+        alert("Choisis un produit.");
+        return;
+      }
+      const keys = getKeys();
+      const existing = new Set(keys.map((entry) => entry.key));
+      const created = Array.from({ length: amount }, () => ({
+        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+        productId,
+        key: createKey(existing),
+        status: "available",
+        orderId: "",
+        createdAt: new Date().toISOString()
+      }));
+      saveKeys([...created, ...keys]);
+      syncProductStock(productId);
+      renderKeys();
+    }
+
+    function deleteKey(id) {
+      if (!isAdmin()) return;
+      const key = getKeys().find((entry) => entry.id === id);
+      saveKeys(getKeys().filter((entry) => entry.id !== id));
+      if (key?.productId) syncProductStock(key.productId);
+      renderKeys();
+    }
+
+    async function copyKey(key) {
+      await navigator.clipboard.writeText(key);
+    }
+
+    function exportKeys() {
+      const data = JSON.stringify(getKeys(), null, 2);
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "lusive-keys.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderProductOptions() {
+      const products = getProducts();
+      const keyProducts = products.filter((product) => product.fulfillment === "key");
+      const selected = params.get("product") || keyProducts[0]?.id || products[0]?.id || "";
+      document.querySelector("#keyProduct").innerHTML = (keyProducts.length ? keyProducts : products).map((product) => `
+        <option value="${product.id}" ${product.id === selected ? "selected" : ""}>${product.name}</option>
+      `).join("");
+    }
+
+    function renderKeys() {
+      if (!isAdmin()) return;
+      const keys = getKeys();
+      const products = new Map(getProducts().map((product) => [product.id, product.name]));
+      document.querySelector("#keysCount").textContent = `${keys.length} key${keys.length === 1 ? "" : "s"}`;
+      const board = document.querySelector("#keysBoard");
+      if (!keys.length) {
+        board.innerHTML = `<section class="empty-keys">Aucune key generee.</section>`;
+        return;
+      }
+      board.innerHTML = keys.map((entry) => `
+        <article class="key-card">
+          <div>
+            <div class="key-code">${entry.key}</div>
+            <div class="key-meta">${products.get(entry.productId) || entry.productId} | ${entry.status}${entry.orderId ? ` | ${entry.orderId}` : ""}</div>
+          </div>
+          <button class="ghost-button" type="button" onclick="copyKey('${entry.key}')">Copier</button>
+          <button class="ghost-button" type="button" onclick="deleteKey('${entry.id}')">Supprimer</button>
+        </article>
+      `).join("");
+    }
+
+    function renderPage() {
+      const allowed = isAdmin();
+      document.querySelector("#accessBadge").textContent = allowed ? "admin actif" : "acces bloque";
+      document.querySelector("#accessDenied").hidden = allowed;
+      document.querySelector("#keysPanel").hidden = !allowed;
+      if (!allowed) return;
+      renderProductOptions();
+      renderKeys();
+    }
+
+    renderPage();
+    window.addEventListener("gmail-auth-change", renderPage);
+    window.addEventListener("storage", renderPage);
+  </script>
+</body>
+</html>

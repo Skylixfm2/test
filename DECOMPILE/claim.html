@@ -24,6 +24,7 @@
       <a class="page-link" href="orders.html">My Orders</a>
       <a class="page-link" href="adminOrders.html">Admin Orders</a>
       <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link" href="adminKeys.html">Admin Keys</a>
     </nav>
     <section class="gmail-auth" data-gmail-auth></section>
 
@@ -76,6 +77,25 @@
       }
 
       const product = (order.products || [])[0] || {};
+      const assignedKeys = Array.isArray(order.assignedKeys) ? order.assignedKeys : [];
+      if (product.fulfillment === "key" || product.id === "codes") {
+        content.innerHTML = `
+          <p class="eyebrow">Key disponible</p>
+          <h1>Claim Key</h1>
+          <div class="claim-meta">
+            <div><span>Commande ID</span>${order.id}</div>
+            <div><span>Produit</span>${product.name || "-"}</div>
+            <div><span>Status</span>${order.status}</div>
+            <div><span>Key</span><span class="claim-file">${assignedKeys.join(", ") || "Aucune key attachee"}</span></div>
+          </div>
+          <div class="claim-actions">
+            <button class="page-link active" type="button" onclick="navigator.clipboard.writeText('${assignedKeys.join("\\n")}')">Copier la key</button>
+            <a class="ghost-button" href="orders.html">Retour My Orders</a>
+          </div>
+        `;
+        return;
+      }
+
       const rewardFile = order.rewardFile || product.rewardFile || DEFAULT_REWARD_FILE;
       const rewardHref = encodeURI(rewardFile);
       content.innerHTML = `

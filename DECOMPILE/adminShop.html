@@ -36,6 +36,7 @@
       <a class="page-link" href="orders.html">My Orders</a>
       <a class="page-link" href="adminOrders.html">Admin Orders</a>
       <a class="page-link active" href="adminShop.html">Admin Shop</a>
+      <a class="page-link" href="adminKeys.html">Admin Keys</a>
       <a class="page-link" href="admin.html">Admin</a>
     </nav>
     <section class="gmail-auth" data-gmail-auth></section>
@@ -48,9 +49,44 @@
       <span id="accessBadge" class="history-pill">verification</span>
     </section>
 
-    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis. Va sur la page Admin, unlock admin, puis reviens ici.</section>
+    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis. Connecte-toi avec le Gmail admin.</section>
 
     <section id="adminShopPanel" class="admin-shop-grid" hidden>
+      <section class="panel">
+        <div class="share-header">
+          <h2>Nouveau produit</h2>
+          <span class="history-pill">shop</span>
+        </div>
+        <div class="admin-shop-card">
+          <div class="admin-shop-form">
+            <label>Nom</label>
+            <input id="newProductName" class="account-input" type="text" placeholder="ex: Pack Key">
+            <label>Prix</label>
+            <input id="newProductPrice" class="account-input" type="number" min="0" step="0.01" value="4.99">
+            <label>Prix Robux</label>
+            <input id="newProductRobuxPrice" class="account-input" type="number" min="0" step="1" value="1000">
+            <label>Stock</label>
+            <input id="newProductStock" class="account-input" type="text" value="10 in stock">
+            <label>Lien Robux</label>
+            <input id="newProductLink" class="account-input" type="url" value="https://www.roblox.com/fr/game-pass/1862510568/1000">
+            <label>Reward file</label>
+            <input id="newProductReward" class="account-input" type="text" value="rewards/[] Adopt Me! (Decompile).rbxl">
+          </div>
+          <label class="admin-shop-check">
+            <input id="newProductIsKey" type="checkbox">
+            Produit de type key
+          </label>
+          <label class="admin-shop-check">
+            <input id="newProductMultiple" type="checkbox">
+            Achetable plusieurs fois seulement via PayPal / carte
+          </label>
+          <div class="admin-shop-actions">
+            <button type="button" onclick="addProduct()">Ajouter le produit</button>
+            <a class="ghost-button" href="adminKeys.html">Generer des keys</a>
+          </div>
+        </div>
+      </section>
+
       <section class="panel">
         <div class="share-header">
           <h2>Produits</h2>
@@ -77,7 +113,7 @@
       { id: "premium", name: "Premium Pack", price: 9.99, robuxPrice: 1000, stock: "118 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false },
       { id: "ultimate", name: "Ultimate Pack", price: 19.99, robuxPrice: 1000, stock: "3 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false },
       { id: "starter", name: "Starter Bundle", price: 1.65, robuxPrice: 1000, stock: "221 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false },
-      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false }
+      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" }
     ];
 
     function isAdmin() {
@@ -89,14 +125,19 @@
       try {
         const parsed = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "null");
         if (Array.isArray(parsed) && parsed.length) {
-          return parsed.map((product, index) => ({
-            ...defaultProducts[index],
+          const defaultsById = new Map(defaultProducts.map((product) => [product.id, product]));
+          return parsed.map((product) => {
+            const fallback = defaultsById.get(product.id) || {};
+            return {
+            ...fallback,
             ...product,
-            robloxLink: product.robloxLink || defaultProducts[index]?.robloxLink || defaultRobloxLink,
-            rewardFile: product.rewardFile || defaultProducts[index]?.rewardFile || defaultRewardFile,
-            robuxPrice: Math.max(0, Number(product.robuxPrice ?? defaultProducts[index]?.robuxPrice ?? 0)),
+            robloxLink: product.robloxLink || fallback.robloxLink || defaultRobloxLink,
+            rewardFile: product.rewardFile || fallback.rewardFile || defaultRewardFile,
+            robuxPrice: Math.max(0, Number(product.robuxPrice ?? fallback.robuxPrice ?? 0)),
+            fulfillment: (product.fulfillment || fallback.fulfillment) === "key" ? "key" : "file",
             allowMultiple: Boolean(product.allowMultiple)
-          }));
+            };
+          });
         }
       } catch {
       }
@@ -119,10 +160,56 @@
           stock: document.querySelector(`[data-product-stock="${id}"]`).value.trim() || "Out of stock",
           robloxLink: document.querySelector(`[data-product-link="${id}"]`).value.trim() || defaultRobloxLink,
           rewardFile: document.querySelector(`[data-product-reward="${id}"]`).value.trim() || defaultRewardFile,
+          fulfillment: document.querySelector(`[data-product-fulfillment="${id}"]`).value === "key" ? "key" : "file",
           allowMultiple: document.querySelector(`[data-product-multiple="${id}"]`).checked
         };
       });
       saveProducts(products);
+      renderAdminShop();
+    }
+
+    function createProductId(name) {
+      const base = String(name || "produit").toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+        .slice(0, 28) || "produit";
+      const existing = new Set(getProducts().map((product) => product.id));
+      let id = base;
+      let index = 2;
+      while (existing.has(id)) {
+        id = `${base}-${index}`;
+        index += 1;
+      }
+      return id;
+    }
+
+    function addProduct() {
+      if (!isAdmin()) return;
+      const name = document.querySelector("#newProductName").value.trim();
+      if (name.length < 2) {
+        alert("Mets un nom de produit.");
+        return;
+      }
+      const product = {
+        id: createProductId(name),
+        name,
+        price: Math.max(0, Number(document.querySelector("#newProductPrice").value || 0)),
+        robuxPrice: Math.max(0, Number(document.querySelector("#newProductRobuxPrice").value || 0)),
+        stock: document.querySelector("#newProductStock").value.trim() || "Out of stock",
+        robloxLink: document.querySelector("#newProductLink").value.trim() || defaultRobloxLink,
+        rewardFile: document.querySelector("#newProductReward").value.trim() || defaultRewardFile,
+        fulfillment: document.querySelector("#newProductIsKey").checked ? "key" : "file",
+        allowMultiple: document.querySelector("#newProductMultiple").checked
+      };
+      saveProducts([product, ...getProducts()]);
+      document.querySelector("#newProductName").value = "";
+      renderAdminShop();
+    }
+
+    function deleteProduct(id) {
+      if (!isAdmin()) return;
+      if (!confirm("Supprimer ce produit ?")) return;
+      saveProducts(getProducts().filter((product) => product.id !== id));
       renderAdminShop();
     }
 
@@ -147,6 +234,11 @@
             <input class="account-input" data-product-link="${product.id}" type="url" value="${product.robloxLink || defaultRobloxLink}">
             <label>Reward file</label>
             <input class="account-input" data-product-reward="${product.id}" type="text" value="${product.rewardFile || defaultRewardFile}" placeholder="ex: rewards/item.rblx">
+            <label>Type</label>
+            <select class="account-input" data-product-fulfillment="${product.id}">
+              <option value="file" ${product.fulfillment !== "key" ? "selected" : ""}>Fichier reward</option>
+              <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>Key 15 caracteres</option>
+            </select>
           </div>
           <label class="admin-shop-check">
             <input data-product-multiple="${product.id}" type="checkbox" ${product.allowMultiple ? "checked" : ""}>
@@ -154,6 +246,8 @@
           </label>
           <div class="admin-shop-actions">
             <button type="button" onclick="saveProduct('${product.id}')">Sauvegarder</button>
+            <button class="ghost-button" type="button" onclick="deleteProduct('${product.id}')">Supprimer</button>
+            ${product.fulfillment === "key" ? `<a class="ghost-button" href="adminKeys.html?product=${encodeURIComponent(product.id)}">Keys</a>` : ""}
           </div>
         </article>
       `).join("");

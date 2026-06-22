@@ -23,6 +23,7 @@
 body:not(.is-admin) a[href="admin.html"],
 body:not(.is-admin) a[href="adminOrders.html"],
 body:not(.is-admin) a[href="adminShop.html"],
+body:not(.is-admin) a[href="adminKeys.html"],
 body:not(.is-admin) [data-admin-only],
 body:not(.is-admin) .admin-button,
 body:not(.is-admin) .account-group-admin,

@@ -103,6 +103,7 @@
       <a class="page-link" href="orders.html">My Orders</a>
       <a class="page-link" href="adminOrders.html">Admin Orders</a>
       <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link" href="adminKeys.html">Admin Keys</a>
     </nav>
 
     <section class="store-top">
@@ -199,7 +200,7 @@
       { id: "premium", name: "Premium Pack", price: 9.99, robuxPrice: 1000, stock: "118 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
       { id: "ultimate", name: "Ultimate Pack", price: 19.99, robuxPrice: 1000, stock: "3 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
       { id: "starter", name: "Starter Bundle", price: 1.65, robuxPrice: 1000, stock: "221 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
-      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false }
+      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" }
     ];
 
     const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
@@ -247,14 +248,19 @@
       try {
         const saved = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "null");
         if (Array.isArray(saved) && saved.length) {
-          const normalized = saved.map((product, index) => ({
-            ...defaultProducts[index],
+          const defaultsById = new Map(defaultProducts.map((product) => [product.id, product]));
+          const normalized = saved.map((product) => {
+            const fallback = defaultsById.get(product.id) || {};
+            return {
+            ...fallback,
             ...product,
-            robloxLink: product.robloxLink || defaultProducts[index]?.robloxLink || defaultProducts[0].robloxLink,
-            rewardFile: product.rewardFile || defaultProducts[index]?.rewardFile || DEFAULT_REWARD_FILE,
-            robuxPrice: Math.max(0, Number(product.robuxPrice ?? defaultProducts[index]?.robuxPrice ?? 0)),
+            robloxLink: product.robloxLink || fallback.robloxLink || defaultProducts[0].robloxLink,
+            rewardFile: product.rewardFile || fallback.rewardFile || DEFAULT_REWARD_FILE,
+            robuxPrice: Math.max(0, Number(product.robuxPrice ?? fallback.robuxPrice ?? 0)),
+            fulfillment: (product.fulfillment || fallback.fulfillment) === "key" ? "key" : "file",
             allowMultiple: Boolean(product.allowMultiple)
-          }));
+            };
+          });
           localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(normalized));
           return normalized;
         }
@@ -459,7 +465,7 @@
         totalLabel: proof.payment === "roblox" ? formatRobux(robuxTotal()) : money.format(total()),
         currency: proof.payment === "roblox" ? "R$" : "EUR",
         robuxTotal: proof.payment === "roblox" ? robuxTotal() : 0,
-        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE }] : [],
+        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE, fulfillment: selectedProduct.fulfillment || "file" }] : [],
         rewardFile: selectedProduct?.rewardFile || DEFAULT_REWARD_FILE,
         transactionProofName: proof.transactionProofName,
         gamepassProofName: proof.gamepassProofName,

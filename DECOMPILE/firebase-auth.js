@@ -63,7 +63,7 @@ function isAdmin() {
 function updateAdminVisibility() {
   const allowed = isAdmin();
   document.body.classList.toggle("is-admin", allowed);
-  document.querySelectorAll("[data-admin-only], a[href='admin.html'], a[href='adminOrders.html'], a[href='adminShop.html']").forEach((element) => {
+  document.querySelectorAll("[data-admin-only], a[href='admin.html'], a[href='adminOrders.html'], a[href='adminShop.html'], a[href='adminKeys.html']").forEach((element) => {
     element.hidden = !allowed;
   });
 }
