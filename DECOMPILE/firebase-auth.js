@@ -16,6 +16,7 @@ const CUSTOMER_PSEUDO_KEY = "lusive-customer-pseudo";
 const CUSTOMER_PHONE_KEY = "lusive-customer-phone";
 const EMAIL_VERIFIED_KEY = "lusive-email-verified";
 const PHONE_VERIFIED_KEY = "lusive-phone-verified";
+const FIREBASE_UID_KEY = "lusive-firebase-uid";
 const FIREBASE_PENDING_EMAIL_KEY = "lusive-firebase-pending-email";
 const FIREBASE_PHONE_VERIFICATION_KEY = "lusive-firebase-phone-verification";
 
@@ -53,11 +54,11 @@ function getCustomerPhone() {
 }
 
 function isEmailVerified() {
-  return localStorage.getItem(EMAIL_VERIFIED_KEY) === "true" && Boolean(getCustomerEmail());
+  return localStorage.getItem(EMAIL_VERIFIED_KEY) === "true" && Boolean(getCustomerEmail()) && Boolean(localStorage.getItem(FIREBASE_UID_KEY));
 }
 
 function isPhoneVerified() {
-  return localStorage.getItem(PHONE_VERIFIED_KEY) === "true" && Boolean(getCustomerPhone());
+  return localStorage.getItem(PHONE_VERIFIED_KEY) === "true" && Boolean(getCustomerPhone()) && Boolean(localStorage.getItem(FIREBASE_UID_KEY));
 }
 
 function isFullyVerified() {
@@ -90,6 +91,7 @@ async function completeEmailLinkIfNeeded() {
   const credential = await signInWithEmailLink(auth, normalizeGmail(email), window.location.href);
   localStorage.setItem(CUSTOMER_EMAIL_KEY, normalizeGmail(credential.user.email));
   localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
+  localStorage.setItem(FIREBASE_UID_KEY, credential.user.uid);
   localStorage.removeItem(FIREBASE_PENDING_EMAIL_KEY);
   history.replaceState({}, document.title, location.pathname);
   dispatchAuthChange();
@@ -132,6 +134,7 @@ function clearCustomerEmail() {
   localStorage.removeItem(CUSTOMER_PHONE_KEY);
   localStorage.removeItem(EMAIL_VERIFIED_KEY);
   localStorage.removeItem(PHONE_VERIFIED_KEY);
+  localStorage.removeItem(FIREBASE_UID_KEY);
   localStorage.removeItem(FIREBASE_PENDING_EMAIL_KEY);
   sessionStorage.removeItem(FIREBASE_PHONE_VERIFICATION_KEY);
   signOut(auth).catch(() => {});
@@ -193,7 +196,6 @@ function renderGmailAuth() {
       } catch (err) {
         error.textContent = `Erreur Firebase email: ${err.code || err.message}`;
       }
-      renderGmailAuth();
     });
 
     container.querySelector(".gmail-send-phone").addEventListener("click", async () => {
@@ -269,6 +271,17 @@ onAuthStateChanged(auth, (user) => {
   if (user?.email) {
     localStorage.setItem(CUSTOMER_EMAIL_KEY, normalizeGmail(user.email));
     localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
+    localStorage.setItem(FIREBASE_UID_KEY, user.uid);
+    if (user.phoneNumber) {
+      localStorage.setItem(CUSTOMER_PHONE_KEY, user.phoneNumber);
+      localStorage.setItem(PHONE_VERIFIED_KEY, "true");
+    } else if (!sessionStorage.getItem(FIREBASE_PHONE_VERIFICATION_KEY)) {
+      localStorage.setItem(PHONE_VERIFIED_KEY, "false");
+    }
+  } else {
+    localStorage.removeItem(FIREBASE_UID_KEY);
+    localStorage.setItem(EMAIL_VERIFIED_KEY, "false");
+    localStorage.setItem(PHONE_VERIFIED_KEY, "false");
   }
   renderGmailAuth();
   dispatchAuthChange();
