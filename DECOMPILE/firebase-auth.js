@@ -261,6 +261,7 @@ window.gmailAuth = {
   render: renderGmailAuth
 };
 
+renderGmailAuth();
 getRedirectResult(auth).catch((error) => console.warn("Firebase redirect error", error));
 onAuthStateChanged(auth, (user) => {
   if (user?.email) {
