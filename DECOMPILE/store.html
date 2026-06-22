@@ -187,9 +187,7 @@
     const ADMIN_UNLOCK_KEYS = ["luau-admin-unlocked-reset-20260622", "luau-admin-unlocked"];
     const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const CUSTOMER_PSEUDO_KEY = "lusive-customer-pseudo";
-    const CUSTOMER_PHONE_KEY = "lusive-customer-phone";
     const EMAIL_VERIFIED_KEY = "lusive-email-verified";
-    const PHONE_VERIFIED_KEY = "lusive-phone-verified";
     const defaultProducts = [
       { id: "vip", name: "VIP Access", price: 4.99, robuxPrice: 1000, stock: "14813 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
       { id: "premium", name: "Premium Pack", price: 9.99, robuxPrice: 1000, stock: "118 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
@@ -216,19 +214,13 @@
       return normalizeEmail(localStorage.getItem(CUSTOMER_EMAIL_KEY));
     }
 
-    function getCustomerPhone() {
-      return String(localStorage.getItem(CUSTOMER_PHONE_KEY) || "").trim();
-    }
-
     function getCustomerPseudo() {
       return String(localStorage.getItem(CUSTOMER_PSEUDO_KEY) || "").trim();
     }
 
     function isCustomerVerified() {
       return Boolean(getCustomerEmail())
-        && Boolean(getCustomerPhone())
-        && localStorage.getItem(EMAIL_VERIFIED_KEY) === "true"
-        && localStorage.getItem(PHONE_VERIFIED_KEY) === "true";
+        && localStorage.getItem(EMAIL_VERIFIED_KEY) === "true";
     }
 
     function setCustomerEmail(email) {
@@ -294,7 +286,7 @@
       if (!product) return;
       if (isOutOfStock(product)) return;
       if (!isCustomerVerified()) {
-        document.querySelector("#mailError").textContent = "Verifie ton Gmail et ton telephone avant d'acheter.";
+        document.querySelector("#mailError").textContent = "Connecte-toi avec Google avant d'acheter.";
         return;
       }
       const remaining = isAdmin() ? 0 : cooldownRemainingMs();
@@ -449,7 +441,6 @@
         provider,
         customerEmail: getCustomerEmail(),
         customerPseudo: getCustomerPseudo(),
-        customerPhone: getCustomerPhone(),
         username: proof.username,
         quantity: proof.quantity,
         total: total(),
