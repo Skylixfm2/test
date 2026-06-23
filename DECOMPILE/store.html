@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boutique</title>
+  <link rel="stylesheet" href="styles.css?v=lusive-store">
+  <style>
+    body {
+      background:
+        linear-gradient(rgba(4, 12, 25, 0.88), rgba(4, 12, 25, 0.94)),
+        radial-gradient(circle at 18% 15%, rgba(0, 167, 255, 0.22), transparent 28%),
+        radial-gradient(circle at 88% 10%, rgba(82, 108, 255, 0.18), transparent 26%),
+        #06101f;
+    }
+
+    .app-shell { width: min(1120px, calc(100% - 36px)); }
+    .store-top { display: grid; gap: 22px; align-items: start; margin: 26px 0; }
+    .store-hero { display: grid; gap: 12px; margin: 0; }
+    .store-hero h1 { font-size: clamp(2.4rem, 5vw, 4.7rem); }
+
+    .store-layout { display: grid; gap: 24px; align-items: start; }
+    .shop-type-nav { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+    .shop-type-button { min-width: 112px; min-height: 42px; padding: 10px 16px; border-radius: 999px; border: 1px solid rgba(65, 149, 217, 0.34); background: rgba(9, 17, 39, 0.72); color: #dce5ff; font-weight: 900; box-shadow: none; }
+    .shop-type-button.active { background: linear-gradient(135deg, #50d4d2, #5d85ff); color: #06101f; border-color: transparent; }
+    .mail-login { display: flex; align-items: end; justify-content: space-between; gap: 14px; padding: 16px; border-radius: 12px; background: rgba(9, 17, 39, 0.88); border: 1px solid rgba(0, 178, 255, 0.22); flex-wrap: wrap; }
+    .mail-login strong { display: block; color: #ffffff; }
+    .mail-login span { color: #aab5c8; font-size: 0.92rem; }
+    .mail-login-form { display: flex; gap: 10px; flex: 1 1 360px; justify-content: flex-end; flex-wrap: wrap; }
+    .mail-login-form input { flex: 1 1 260px; min-height: 42px; border-radius: 10px; border: 1px solid rgba(65, 149, 217, 0.28); background: rgba(255,255,255,0.04); color: #ffffff; padding: 0 13px; }
+    .mail-login-form button { min-height: 42px; }
+    .mail-error { flex-basis: 100%; color: #ff9a9a; font-weight: 800; font-size: 0.9rem; text-align: right; }
+    .store-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+    .product-card { overflow: hidden; padding: 0; border-radius: 10px; background: #091127; border: 1px solid rgba(0, 178, 255, 0.24); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28); transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+    .product-card:hover { transform: translateY(-2px); border-color: rgba(0, 194, 255, 0.78); box-shadow: 0 20px 42px rgba(0, 132, 255, 0.18); }
+    .product-art { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-bottom: 2px solid rgba(0, 192, 255, 0.7); background: radial-gradient(circle at 16% 18%, #1297ff 0 0, transparent 30%), radial-gradient(circle at 84% 86%, #00d5ff 0 0, transparent 22%), linear-gradient(135deg, #06336a 0%, #061326 52%, #0b2f7d 100%); }
+    .product-art::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 34px 34px; opacity: 0.34; }
+    .product-art::after { content: "R"; position: absolute; right: 18px; top: 20px; width: 76px; height: 76px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(135deg, #f7fbff, #0d91ff); color: #05214b; font-size: 3rem; font-weight: 950; font-style: italic; box-shadow: 0 12px 24px rgba(0,0,0,0.38); }
+    .product-badge { position: absolute; top: 10px; right: 10px; color: #61f0ff; font-size: 1.05rem; font-weight: 950; z-index: 1; }
+    .product-body { display: grid; gap: 14px; padding: 16px 18px 18px; }
+    .product-card h2 { min-height: 48px; margin: 0; font-size: 1.06rem; line-height: 1.2; color: #ffffff; }
+    .product-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #aab5c8; }
+    .price { font-size: 1rem; font-weight: 800; color: #10a7ff; }
+    .stock { white-space: nowrap; color: #aab5c8; }
+    .buy-button { width: 100%; min-height: 40px; }
+    .buy-button:disabled { color: #8190aa; background: rgba(255, 255, 255, 0.07); box-shadow: none; cursor: not-allowed; }
+    .product-card.is-out { opacity: 0.62; }
+    .product-card.is-out .product-art { filter: grayscale(0.7); }
+    .payment-options { display: grid; gap: 8px; }
+    .payment-options label { min-height: 42px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(65, 149, 217, 0.25); border-radius: 10px; background: rgba(255, 255, 255, 0.035); cursor: pointer; font-weight: 800; }
+    .payment-title { color: #9298a8; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+    .store-note { margin: 12px 0 0; font-size: 0.82rem; line-height: 1.4; color: #98a6ba; }
+    .status-box { min-height: 20px; margin-top: 10px; color: #61f0ff; font-weight: 800; font-size: 0.9rem; overflow-wrap: anywhere; }
+    .order-id { display: grid; gap: 6px; margin-top: 12px; padding: 10px; border-radius: 10px; border: 1px solid rgba(97, 240, 255, 0.26); background: rgba(97, 240, 255, 0.08); color: #e9faff; }
+    .order-id code { color: #61f0ff; font-family: Consolas, "Cascadia Code", monospace; overflow-wrap: anywhere; }
+    .proof-overlay { position: fixed; inset: 0; z-index: 50; display: none; place-items: center; padding: 18px; background: rgba(2, 5, 12, 0.72); backdrop-filter: blur(10px); overflow: hidden; }
+    .proof-overlay.open { display: grid; }
+    .proof-modal { width: min(420px, 100%); max-height: min(92vh, 760px); display: grid; grid-template-rows: auto minmax(0, 1fr); border: 1px solid rgba(132, 97, 255, 0.28); border-radius: 12px; background: #181b25; color: #f7f7ff; box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55); overflow: hidden; }
+    .proof-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 22px; }
+    .proof-title { display: flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: 900; }
+    .proof-shield { color: #8b5cff; font-size: 1.2rem; }
+    .proof-close { width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: 8px; background: transparent; color: #aeb4c3; box-shadow: none; }
+    .proof-body { display: grid; gap: 16px; padding: 0 22px 22px; overflow-y: auto; min-height: 0; scrollbar-width: thin; scrollbar-color: #7357ff rgba(255, 255, 255, 0.06); }
+    .proof-body::-webkit-scrollbar { width: 10px; }
+    .proof-body::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.06); border-radius: 999px; }
+    .proof-body::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #61f0ff, #7357ff); border-radius: 999px; }
+    .proof-service { padding: 13px 16px; border-radius: 10px; background: rgba(255, 255, 255, 0.035); color: #aeb4c3; font-weight: 800; }
+    .proof-service strong { color: #ffffff; }
+    .proof-service span { color: #ffd12f; }
+    .proof-help { padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(139, 92, 255, 0.34); background: rgba(139, 92, 255, 0.16); color: #9c76ff; font-size: 0.9rem; font-weight: 800; }
+    .proof-field { display: grid; gap: 8px; }
+    .proof-field.is-hidden,
+    .paypal-only.is-hidden,
+    .card-only.is-hidden,
+    .robux-only.is-hidden { display: none; }
+    .proof-field label { color: #9298a8; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+    .proof-field input[type="text"],
+    .proof-field input[type="email"] { width: 100%; min-height: 42px; border-radius: 10px; border: 1px solid rgba(139, 92, 255, 0.78); background: #151923; color: #ffffff; padding: 0 13px; }
+    .proof-field input[type="number"] { width: 100%; min-height: 42px; border-radius: 10px; border: 1px solid rgba(139, 92, 255, 0.78); background: #151923; color: #ffffff; padding: 0 13px; }
+    .proof-upload { position: relative; display: grid; place-items: center; min-height: 76px; border: 2px dashed rgba(112, 120, 142, 0.28); border-radius: 11px; background: rgba(255, 255, 255, 0.02); color: #9298a8; cursor: pointer; text-align: center; }
+    .proof-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .proof-upload span { display: grid; gap: 6px; justify-items: center; pointer-events: none; }
+    .proof-upload strong { color: #dce5ff; font-size: 0.9rem; overflow-wrap: anywhere; }
+    .proof-submit { width: 100%; background: linear-gradient(135deg, #6f46d9, #5a38b0); color: #ffffff; }
+
+    @media (max-width: 1080px) {
+      .store-top { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 820px) {
+      .store-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 560px) {
+      .store-grid { grid-template-columns: 1fr; }
+      .app-shell { width: min(100% - 20px, 1220px); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="top-nav">
+      <a class="page-link" href="app.html">Workspace</a>
+      <a class="page-link" href="community.html">Community</a>
+      <a class="page-link" href="post.html">Post</a>
+      <a class="page-link" href="pet-icon-maker.html">Pet Icons</a>
+      <a class="page-link active" href="store.html">Shop</a>
+      <a class="page-link" href="orders.html">My Orders</a>
+      <a class="page-link" href="adminOrders.html">Admin Orders</a>
+      <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link" href="adminKeys.html">Admin Keys</a>
+    </nav>
+
+    <section class="store-top">
+      <section class="hero store-hero">
+        <h1>Boutique</h1>
+        <div class="shop-type-nav" aria-label="Categories boutique">
+          <button class="shop-type-button active" type="button" data-shop-filter="all">Tous</button>
+          <button class="shop-type-button" type="button" data-shop-filter="key">Keys</button>
+          <button class="shop-type-button" type="button" data-shop-filter="file">Fichiers</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="store-layout">
+      <section class="gmail-auth" data-gmail-auth></section>
+      <div id="mailError" class="mail-error"></div>
+      <section class="store-grid" id="productGrid"></section>
+    </section>
+  </main>
+
+  <section class="proof-overlay" id="proofOverlay" aria-hidden="true">
+    <form class="proof-modal" id="proofForm">
+      <div class="proof-header">
+        <div class="proof-title"><span class="proof-shield">◇</span>Verifier mon achat</div>
+        <button class="proof-close" id="proofClose" type="button">×</button>
+      </div>
+      <div class="proof-body">
+        <div class="proof-service">Service : <strong id="proofService">Selection</strong> <span id="proofAmount">0,00 EUR</span></div>
+        <a class="ghost-button robux-only" id="robuxPaymentLink" href="https://www.roblox.com/fr/game-pass/1862510568/1000" target="_blank" rel="noopener">Acheter en Robux</a>
+        <div class="proof-field">
+          <div class="payment-title">Moyen de paiement</div>
+          <div class="payment-options">
+            <label><input type="radio" name="payment" value="roblox" checked> Roblox Game Pass</label>
+            <label><input type="radio" name="payment" value="paypal"> PayPal</label>
+            <label><input type="radio" name="payment" value="card"> Carte bancaire</label>
+          </div>
+        </div>
+        <div class="proof-help" id="proofHelp">Tu dois fournir une preuve de transaction et une capture montrant que tu possedes le gamepass.</div>
+
+        <div class="proof-field">
+          <label for="orderContactEmail">Mail de commande</label>
+          <input id="orderContactEmail" name="orderContactEmail" type="email" placeholder="email pour recevoir ta commande" autocomplete="email" required>
+        </div>
+
+        <div class="proof-field paypal-only is-hidden" id="paypalSenderField">
+          <label for="paypalSenderEmail">Mail PayPal qui a envoye l'argent</label>
+          <input id="paypalSenderEmail" name="paypalSenderEmail" type="email" placeholder="email PayPal utilise pour le paiement">
+        </div>
+
+        <div class="proof-field card-only is-hidden" id="payerIbanField">
+          <label for="payerIban">Ton IBAN</label>
+          <input id="payerIban" name="payerIban" type="text" placeholder="IBAN utilise pour le virement">
+        </div>
+
+        <div class="proof-field is-hidden" id="quantityField">
+          <label for="purchaseQuantity">Quantite</label>
+          <input id="purchaseQuantity" type="number" min="1" value="1">
+        </div>
+
+        <div class="proof-field robux-only" id="robloxUsernameField">
+          <label for="robloxUsername">Pseudo Roblox</label>
+          <input id="robloxUsername" name="robloxUsername" type="text" placeholder="ex: MonPseudo123" minlength="3" maxlength="32">
+        </div>
+
+        <div class="proof-field">
+          <label for="transactionProof">Capture transaction</label>
+          <label class="proof-upload">
+            <input id="transactionProof" name="transactionProof" type="file" accept="image/png,image/jpeg,image/webp" required>
+            <span>▧ <strong id="transactionProofName">Clique pour choisir</strong></span>
+          </label>
+        </div>
+
+        <div class="proof-field robux-only" id="gamepassProofField">
+          <label for="gamepassProof">Capture possession gamepass</label>
+          <label class="proof-upload">
+            <input id="gamepassProof" name="gamepassProof" type="file" accept="image/png,image/jpeg,image/webp">
+            <span>▧ <strong id="gamepassProofName">Clique pour choisir</strong></span>
+          </label>
+        </div>
+
+        <div id="proofOrderResult"></div>
+        <button class="proof-submit" type="submit">Envoyer la preuve</button>
+      </div>
+    </form>
+  </section>
+
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script>
+    const CHECKOUT_CONFIG = {
+      paypalBusinessEmail: "ethannfavre@gmail.com",
+      cardIban: "FR76 3000 6000 0112 3456 7890 189",
+      stripeCheckoutUrl: "https://buy.stripe.com/test_REPLACE_ME",
+      robloxUniverseId: "REPLACE_UNIVERSE_ID"
+    };
+
+    const STORE_PRODUCTS_KEY = "lusive-store-products";
+    const DELETED_PRODUCTS_KEY = "lusive-deleted-products";
+    const STORE_ORDERS_KEY = "lusive-store-orders";
+    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1518658953599516803/yJ-e3SmyH1Xli1tfUcXu2ADAx1du0ukXGm8xN63ooW24s8dXw6MksNWLyv-eD_2-mQ-A";
+    const DISCORD_WEBHOOK_50_URL = "https://discord.com/api/webhooks/1518786007330193498/3lthejVM-AyvM_PWOPZSEnlYMbQUlQAETrrUbk1YO5qFDYIHE4GUB3GvmsM1-_N_o0Gd";
+    const DISCORD_WEBHOOK_500_URL = "https://discord.com/api/webhooks/1518785900350406716/jiKZjNFbgF3c8eFbqXNNLdOVblT0R54Qm9fW3borWyEoaUWn3pfzNU91GdaRGl0sGhK0";
+    const DISCORD_HIGH_VALUE_USER_ID = "1065581387358404699";
+    const DEFAULT_REWARD_FILE = "rewards/[] Adopt Me! (Decompile).rbxl";
+    const PURCHASE_COOLDOWN_KEY = "lusive-last-purchase-at";
+    const PURCHASE_COOLDOWN_MS = 2.5 * 60 * 60 * 1000;
+    const SESSION_STORAGE_KEY = "luau-community-session";
+    const ADMIN_EMAIL = "solarydigix@gmail.com";
+    const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
+    const CUSTOMER_PSEUDO_KEY = "lusive-customer-pseudo";
+    const EMAIL_VERIFIED_KEY = "lusive-email-verified";
+    const defaultProducts = [
+      { id: "vip", name: "VIP Access", price: 4.99, robuxPrice: 1000, stock: "14813 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
+      { id: "premium", name: "Premium Pack", price: 9.99, robuxPrice: 1000, stock: "118 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
+      { id: "ultimate", name: "Ultimate Pack", price: 19.99, robuxPrice: 1000, stock: "3 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
+      { id: "starter", name: "Starter Bundle", price: 1.65, robuxPrice: 1000, stock: "221 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false },
+      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
+      { id: "daily-key", name: "Daily Key", price: 2.99, robuxPrice: 400, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
+      { id: "weekly-key", name: "Weekly Key", price: 7.99, robuxPrice: 1200, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
+      { id: "monthly-key", name: "Monthly Key", price: 14.99, robuxPrice: 2500, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
+      { id: "lifetime-key", name: "Lifetime Key", price: 29.99, robuxPrice: 5000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
+      { id: "bundle-keys", name: "Bundle 5 Keys", price: 11.99, robuxPrice: 1800, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: true, fulfillment: "key" },
+      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "file" },
+      { id: "source-pack", name: "Source Pack", price: 12.99, robuxPrice: 1900, stock: "40 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "file" }
+    ];
+
+    const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+    const ORDER_STORAGE_KEY = "storeOrderIds";
+    const products = getProducts();
+    let selectedProduct = null;
+    let selectedPaymentProvider = "Roblox";
+    let activeShopFilter = "all";
+
+    function normalizeEmail(email) {
+      return String(email || "").trim().toLowerCase();
+    }
+
+    function isValidGmail(email) {
+      return /^[^\s@]+@gmail\.com$/i.test(String(email || "").trim());
+    }
+
+    function getCustomerEmail() {
+      return normalizeEmail(localStorage.getItem(CUSTOMER_EMAIL_KEY));
+    }
+
+    function getCustomerPseudo() {
+      return String(localStorage.getItem(CUSTOMER_PSEUDO_KEY) || "").trim();
+    }
+
+    function isCustomerVerified() {
+      return Boolean(getCustomerEmail())
+        && localStorage.getItem(EMAIL_VERIFIED_KEY) === "true";
+    }
+
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+    }
+
+    function setCustomerEmail(email) {
+      localStorage.setItem(CUSTOMER_EMAIL_KEY, normalizeEmail(email));
+      window.gmailAuth?.render?.();
+    }
+
+    function clearCustomerEmail() {
+      localStorage.removeItem(CUSTOMER_EMAIL_KEY);
+      window.gmailAuth?.render?.();
+    }
+
+    function getProducts() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "null");
+        if (Array.isArray(saved) && saved.length) {
+          const deletedIds = getDeletedProductIds();
+          const defaultsById = new Map(defaultProducts.map((product) => [product.id, product]));
+          const normalized = saved.filter((product) => !deletedIds.has(product.id)).map((product) => {
+            const fallback = defaultsById.get(product.id) || {};
+            return {
+            ...fallback,
+            ...product,
+            robloxLink: product.robloxLink || fallback.robloxLink || defaultProducts[0].robloxLink,
+            rewardFile: product.rewardFile || fallback.rewardFile || DEFAULT_REWARD_FILE,
+            robuxPrice: Math.max(0, Number(product.robuxPrice ?? fallback.robuxPrice ?? 0)),
+            fulfillment: (product.fulfillment || fallback.fulfillment) === "key" ? "key" : "file",
+            allowMultiple: Boolean(product.allowMultiple),
+            keyType: product.keyType || fallback.keyType || "Key"
+            };
+          });
+          const existingIds = new Set(normalized.map((product) => product.id));
+          const missingDefaults = defaultProducts.filter((product) => !existingIds.has(product.id) && !deletedIds.has(product.id));
+          const merged = [...normalized, ...missingDefaults];
+          localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(merged));
+          return merged;
+        }
+      } catch {
+      }
+      localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(defaultProducts));
+      return defaultProducts;
+    }
+
+    function getDeletedProductIds() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(DELETED_PRODUCTS_KEY) || "[]");
+        return new Set(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        return new Set();
+      }
+    }
+
+    function renderProducts() {
+      const visibleProducts = activeShopFilter === "all"
+        ? products
+        : products.filter((product) => (product.fulfillment || "file") === activeShopFilter);
+      document.querySelector("#productGrid").innerHTML = visibleProducts.map(product => `
+        <article class="panel product-card ${isOutOfStock(product) ? "is-out" : ""}">
+          <div class="product-art"><span class="product-badge">W</span></div>
+          <div class="product-body">
+            <h2>${product.name}</h2>
+            <div class="product-meta">
+              <span class="price">${money.format(product.price)}</span>
+              <span class="stock">${product.stock}</span>
+            </div>
+            <button class="buy-button" type="button" onclick="buyProduct('${product.id}')" ${isOutOfStock(product) ? "disabled" : ""}>${isOutOfStock(product) ? "Rupture de stock" : "Acheter"}</button>
+          </div>
+        </article>
+      `).join("") || `<section class="panel empty-orders">Aucun produit dans cette categorie.</section>`;
+    }
+
+    function isOutOfStock(product) {
+      const stock = String(product.stock || "").trim().toLowerCase();
+      const number = Number((stock.match(/\d+/) || [""])[0]);
+      return stock.includes("out of stock")
+        || stock.includes("rupture")
+        || stock.includes("sold out")
+        || stock === "0"
+        || stock.startsWith("0 ")
+        || (!Number.isNaN(number) && number === 0 && /\d/.test(stock));
+    }
+
+    function buyProduct(id) {
+      const product = products.find(item => item.id === id);
+      if (!product) return;
+      if (isOutOfStock(product)) return;
+      if (!isCustomerVerified()) {
+        document.querySelector("#mailError").textContent = "Connecte-toi avec Google avant d'acheter.";
+        return;
+      }
+      const remaining = isAdmin() ? 0 : cooldownRemainingMs();
+      if (remaining > 0) {
+        alert(`Attends encore ${formatCooldown(remaining)} avant un nouvel achat.`);
+        return;
+      }
+      selectedProduct = product;
+      openProofModal();
+    }
+
+    function total() {
+      return selectedProduct ? Number(selectedProduct.price || 0) * getPurchaseQuantity() : 0;
+    }
+
+    function robuxTotal() {
+      return selectedProduct ? Math.max(0, Number(selectedProduct.robuxPrice || 0)) : 0;
+    }
+
+    function formatRobux(value) {
+      return `${Math.round(Number(value || 0)).toLocaleString("fr-FR")} R$`;
+    }
+
+    function currentTotalLabel() {
+      const payment = document.querySelector("input[name='payment']:checked")?.value;
+      return payment === "roblox" ? formatRobux(robuxTotal()) : money.format(total());
+    }
+
+    function isAdmin() {
+      return isCustomerVerified() && getCustomerEmail() === ADMIN_EMAIL;
+    }
+
+    function getStockCount(product) {
+      const match = String(product.stock || "").match(/\d+/);
+      return match ? Number(match[0]) : 0;
+    }
+
+    function formatStock(count) {
+      return count <= 0 ? "Out of stock" : `${count} in stock`;
+    }
+
+    function getPurchaseQuantity() {
+      return Math.max(1, Number(document.querySelector("#purchaseQuantity")?.value || 1));
+    }
+
+    function cooldownRemainingMs() {
+      const lastPurchase = Number(localStorage.getItem(PURCHASE_COOLDOWN_KEY) || 0);
+      return Math.max(0, PURCHASE_COOLDOWN_MS - (Date.now() - lastPurchase));
+    }
+
+    function formatCooldown(ms) {
+      const minutesTotal = Math.ceil(ms / 60000);
+      const hours = Math.floor(minutesTotal / 60);
+      const minutes = minutesTotal % 60;
+      return `${hours}h${String(minutes).padStart(2, "0")}`;
+    }
+
+    function saveProducts(nextProducts) {
+      localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(nextProducts));
+      products.length = 0;
+      products.push(...nextProducts);
+    }
+
+    function decrementStock(productId, quantity) {
+      const nextProducts = products.map((product) => {
+        if (product.id !== productId) return product;
+        return { ...product, stock: formatStock(getStockCount(product) - quantity) };
+      });
+      saveProducts(nextProducts);
+      renderProducts();
+    }
+
+    function savedOrderIds() {
+      try {
+        return JSON.parse(localStorage.getItem(ORDER_STORAGE_KEY) || "[]");
+      } catch {
+        return [];
+      }
+    }
+
+    function getOrders() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_ORDERS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveOrders(orders) {
+      localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+    }
+
+    function createUniqueOrderId() {
+      const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      const existing = new Set(savedOrderIds());
+      let id = "";
+
+      do {
+        const bytes = new Uint8Array(50);
+        crypto.getRandomValues(bytes);
+        id = Array.from(bytes, value => alphabet[value % alphabet.length]).join("");
+      } while (existing.has(id));
+
+      existing.add(id);
+      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify([...existing]));
+      return id;
+    }
+
+    async function sendOrderToDiscord(order, proof) {
+      const formData = new FormData();
+      const productNames = (order.products || []).map((product) => product.name).join(", ") || "-";
+      const orderTotal = Number(order.total || 0);
+      const webhookUrl = orderTotal > 500 ? DISCORD_WEBHOOK_500_URL : orderTotal > 50 ? DISCORD_WEBHOOK_50_URL : DISCORD_WEBHOOK_URL;
+      const pingContent = orderTotal > 1000 ? `<@${DISCORD_HIGH_VALUE_USER_ID}> ` : "";
+      formData.append("payload_json", JSON.stringify({
+        content: `${pingContent}Nouvelle commande: ${order.id}`,
+        embeds: [{
+          title: "Nouvelle commande boutique",
+          color: 0x61f0ff,
+          fields: [
+            { name: "Commande ID", value: order.id, inline: false },
+            { name: "Statut", value: order.status, inline: true },
+            { name: "Paiement", value: order.provider, inline: true },
+            { name: "Total", value: order.totalLabel || money.format(Number(order.total || 0)), inline: true },
+            { name: "Quantite", value: String(order.quantity || 1), inline: true },
+            { name: "Email compte", value: order.customerEmail || "-", inline: false },
+            { name: "Email commande", value: order.contactEmail || "-", inline: false },
+            { name: "Mail PayPal envoyeur", value: order.paypalSenderEmail || "-", inline: false },
+            { name: "IBAN acheteur", value: order.payerIban || "-", inline: false },
+            { name: "Pseudo compte", value: order.customerPseudo || "-", inline: true },
+            { name: "Pseudo Roblox", value: order.username || "-", inline: true },
+            { name: "Produit", value: productNames, inline: false }
+          ],
+          timestamp: order.createdAt
+        }]
+      }));
+      formData.append("files[0]", proof.transactionProofFile, `transaction-${order.id}-${proof.transactionProofFile.name}`);
+      if (proof.gamepassProofFile) {
+        formData.append("files[1]", proof.gamepassProofFile, `gamepass-${order.id}-${proof.gamepassProofFile.name}`);
+      }
+
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`Discord webhook error ${response.status}`);
+      }
+    }
+
+    async function completeOrder(provider, proof) {
+      const orderId = createUniqueOrderId();
+      const order = {
+        id: orderId,
+        status: "pending",
+        provider,
+        customerEmail: getCustomerEmail(),
+        contactEmail: proof.contactEmail,
+        paypalSenderEmail: proof.paypalSenderEmail,
+        payerIban: proof.payerIban,
+        customerPseudo: getCustomerPseudo(),
+        username: proof.username,
+        quantity: proof.quantity,
+        total: total(),
+        totalLabel: proof.payment === "roblox" ? formatRobux(robuxTotal()) : money.format(total()),
+        currency: proof.payment === "roblox" ? "R$" : "EUR",
+        robuxTotal: proof.payment === "roblox" ? robuxTotal() : 0,
+        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE, fulfillment: selectedProduct.fulfillment || "file", keyType: selectedProduct.keyType || "Key" }] : [],
+        rewardFile: selectedProduct?.rewardFile || DEFAULT_REWARD_FILE,
+        transactionProofName: proof.transactionProofName,
+        gamepassProofName: proof.gamepassProofName,
+        createdAt: new Date().toISOString()
+      };
+      saveOrders([order, ...getOrders()]);
+      decrementStock(selectedProduct.id, proof.quantity);
+      localStorage.setItem(PURCHASE_COOLDOWN_KEY, String(Date.now()));
+      document.querySelector("#proofOrderResult").innerHTML = `
+        <div class="order-id">
+          <strong>Commande ID</strong>
+          <code>${orderId}</code>
+          <span id="discordSendStatus">Envoi des preuves au bot Discord...</span>
+          <a class="ghost-button" href="orders.html">Voir la commande</a>
+        </div>
+      `;
+      document.querySelector(".proof-submit").disabled = true;
+      try {
+        await sendOrderToDiscord(order, proof);
+        document.querySelector("#discordSendStatus").textContent = `Paiement ${provider} en verification. Preuves envoyees au bot Discord.`;
+      } catch (_error) {
+        document.querySelector("#discordSendStatus").textContent = `Commande creee, mais l'envoi Discord a echoue. Verifie le webhook/CORS.`;
+      }
+      selectedProduct = null;
+    }
+
+    function openProofModal() {
+      if (!selectedProduct) return;
+      document.querySelector("#proofForm").reset();
+      document.querySelector("#transactionProofName").textContent = "Clique pour choisir";
+      document.querySelector("#gamepassProofName").textContent = "Clique pour choisir";
+      document.querySelector("#proofOrderResult").innerHTML = "";
+      document.querySelector(".proof-submit").disabled = false;
+      document.querySelector("#proofService").textContent = selectedProduct.name;
+      document.querySelector("#orderContactEmail").value = "";
+      document.querySelector("#paypalSenderEmail").value = "";
+      document.querySelector("#payerIban").value = "";
+      document.querySelector("#purchaseQuantity").value = 1;
+      document.querySelector("#proofAmount").textContent = currentTotalLabel();
+      const robuxLink = selectedProduct.robloxLink || defaultProducts[0].robloxLink;
+      document.querySelector("#robuxPaymentLink").href = robuxLink;
+      document.querySelector("#proofOverlay").classList.add("open");
+      document.querySelector("#proofOverlay").setAttribute("aria-hidden", "false");
+      updatePaymentFields();
+    }
+
+    function updatePaymentFields() {
+      const payment = document.querySelector("input[name='payment']:checked").value;
+      const isRoblox = payment === "roblox";
+      const isPaypal = payment === "paypal";
+      const isCard = payment === "card";
+      const canMultiple = Boolean(selectedProduct?.allowMultiple) && !isRoblox;
+      document.querySelectorAll(".robux-only").forEach((element) => {
+        element.classList.toggle("is-hidden", !isRoblox);
+      });
+      document.querySelectorAll(".paypal-only").forEach((element) => {
+        element.classList.toggle("is-hidden", !isPaypal);
+      });
+      document.querySelectorAll(".card-only").forEach((element) => {
+        element.classList.toggle("is-hidden", !isCard);
+      });
+      document.querySelector("#quantityField").classList.toggle("is-hidden", !canMultiple);
+      document.querySelector("#purchaseQuantity").max = canMultiple ? Math.max(1, getStockCount(selectedProduct)) : 1;
+      document.querySelector("#purchaseQuantity").value = canMultiple ? Math.min(getPurchaseQuantity(), Number(document.querySelector("#purchaseQuantity").max)) : 1;
+      document.querySelector("#proofAmount").textContent = currentTotalLabel();
+      document.querySelector("#robloxUsername").required = isRoblox;
+      document.querySelector("#gamepassProof").required = isRoblox;
+      document.querySelector("#paypalSenderEmail").required = isPaypal;
+      document.querySelector("#payerIban").required = isCard;
+      if (isRoblox) {
+        document.querySelector("#proofHelp").textContent = "Tu dois fournir une preuve de transaction et une capture montrant que tu possedes le gamepass.";
+      } else if (payment === "paypal") {
+        document.querySelector("#proofHelp").textContent = `Tu dois envoyer ${money.format(total())} a ${CHECKOUT_CONFIG.paypalBusinessEmail}, puis ajouter la capture de transaction.`;
+      } else {
+        document.querySelector("#proofHelp").textContent = `Tu dois envoyer ${money.format(total())} a cette IBAN : ${CHECKOUT_CONFIG.cardIban}, puis ajouter la capture de transaction.`;
+      }
+      if (isRoblox) {
+        document.querySelector("#robloxUsername").focus();
+      }
+    }
+
+    function closeProofModal() {
+      document.querySelector("#proofOverlay").classList.remove("open");
+      document.querySelector("#proofOverlay").setAttribute("aria-hidden", "true");
+    }
+
+    function updateProofFileName(inputId, labelId) {
+      const input = document.querySelector(inputId);
+      const label = document.querySelector(labelId);
+      label.textContent = input.files[0]?.name || "Clique pour choisir";
+    }
+
+    async function submitProof(event) {
+      event.preventDefault();
+      const username = document.querySelector("#robloxUsername").value.trim();
+      const contactEmail = normalizeEmail(document.querySelector("#orderContactEmail").value);
+      const payment = document.querySelector("input[name='payment']:checked").value;
+      const paypalSenderEmail = normalizeEmail(document.querySelector("#paypalSenderEmail").value);
+      const payerIban = document.querySelector("#payerIban").value.trim().replace(/\s+/g, " ");
+      const transactionProof = document.querySelector("#transactionProof").files[0];
+      const gamepassProof = document.querySelector("#gamepassProof").files[0];
+      const isRoblox = payment === "roblox";
+      const quantity = isRoblox || !selectedProduct?.allowMultiple ? 1 : getPurchaseQuantity();
+      const stockCount = getStockCount(selectedProduct);
+
+      if (!isValidEmail(contactEmail)) {
+        document.querySelector("#proofHelp").textContent = "Entre un mail de commande valide.";
+        return;
+      }
+
+      if (payment === "paypal" && !isValidEmail(paypalSenderEmail)) {
+        document.querySelector("#proofHelp").textContent = "Entre le mail PayPal qui a envoye l'argent.";
+        return;
+      }
+
+      if (payment === "card" && payerIban.length < 12) {
+        document.querySelector("#proofHelp").textContent = "Entre l'IBAN utilise pour le virement.";
+        return;
+      }
+
+      if (!transactionProof || (isRoblox && (!username || !gamepassProof))) {
+        document.querySelector("#proofHelp").textContent = isRoblox
+          ? "Pseudo Roblox + preuve transaction + preuve gamepass obligatoires."
+          : "La preuve de transaction est obligatoire.";
+        return;
+      }
+
+      if (quantity > stockCount) {
+        document.querySelector("#proofHelp").textContent = `Stock insuffisant. Stock actuel: ${stockCount}.`;
+        return;
+      }
+
+      selectedPaymentProvider = payment === "roblox" ? "Roblox" : payment === "paypal" ? "PayPal" : "carte bancaire";
+      await completeOrder(selectedPaymentProvider, {
+        username: isRoblox ? username : "",
+        contactEmail,
+        paypalSenderEmail: payment === "paypal" ? paypalSenderEmail : "",
+        payerIban: payment === "card" ? payerIban : "",
+        quantity,
+        payment,
+        transactionProofName: transactionProof.name,
+        gamepassProofName: isRoblox ? gamepassProof.name : "",
+        transactionProofFile: transactionProof,
+        gamepassProofFile: isRoblox ? gamepassProof : null
+      });
+    }
+
+    document.querySelector("#proofClose").addEventListener("click", closeProofModal);
+    document.querySelector("#proofOverlay").addEventListener("click", event => {
+      if (event.target.id === "proofOverlay") closeProofModal();
+    });
+    document.querySelectorAll("input[name='payment']").forEach((input) => input.addEventListener("change", updatePaymentFields));
+    document.querySelector("#purchaseQuantity").addEventListener("input", () => {
+      if (selectedProduct) {
+        updatePaymentFields();
+      }
+    });
+    document.querySelector("#transactionProof").addEventListener("change", () => updateProofFileName("#transactionProof", "#transactionProofName"));
+    document.querySelector("#gamepassProof").addEventListener("change", () => updateProofFileName("#gamepassProof", "#gamepassProofName"));
+    document.querySelector("#proofForm").addEventListener("submit", submitProof);
+    document.querySelectorAll("[data-shop-filter]").forEach((button) => {
+      button.addEventListener("click", () => {
+        activeShopFilter = button.dataset.shopFilter || "all";
+        document.querySelectorAll("[data-shop-filter]").forEach((item) => {
+          item.classList.toggle("active", item === button);
+        });
+        renderProducts();
+      });
+    });
+    renderProducts();
+  </script>
+</body>
+</html>

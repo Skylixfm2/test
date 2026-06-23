@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luau Script Reconstructor</title>
+  <link rel="stylesheet" href="styles.css?v=font20260606">
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="top-nav">
+      <a class="nav-link" href="store.html">Shop</a>
+      <a class="nav-link" href="orders.html">My Orders</a>
+      <a class="nav-link" href="adminOrders.html">Admin Orders</a>
+      <a class="nav-link" href="adminShop.html">Admin Shop</a>
+      <a class="nav-link" href="adminKeys.html">Admin Keys</a>
+    </nav>
+    <section class="gmail-auth" data-gmail-auth></section>
+
+    <section class="hero">
+      <p class="eyebrow">Local • Chrome • Luau/Lua</p>
+      <h1>Luau Script Reconstructor</h1>
+    </section>
+
+    <section class="panel controls">
+      <label class="upload-card" for="fileInput">
+        <span class="upload-title">Choisir des scripts</span>
+        <span class="upload-copy">Sélection multiple acceptée. Rien n'est envoyé en ligne.</span>
+      </label>
+      <input id="fileInput" type="file" accept=".lua,.luau,.txt" multiple hidden>
+
+      <div class="actions">
+        <button id="downloadCurrent" disabled>Télécharger le script ouvert</button>
+        <button id="downloadAll" disabled>Télécharger tout en JSON</button>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <aside class="panel sidebar">
+        <div class="sidebar-header">
+          <h2>Scripts</h2>
+          <span id="fileCount">0 fichier</span>
+        </div>
+        <div id="fileList" class="file-list empty">
+          Ajoute des scripts pour commencer.
+        </div>
+      </aside>
+
+      <section class="panel editor-panel">
+        <div class="editor-header">
+          <div>
+            <h2 id="currentName">Aucun fichier ouvert</h2>
+          </div>
+          <button id="copyOutput" disabled>Copier le résultat</button>
+        </div>
+        <div class="editor-grid">
+          <div>
+            <h3>Source</h3>
+            <pre id="sourceView" class="code-block muted">En attente d'un fichier...</pre>
+          </div>
+          <div>
+            <h3>Résultat reconstruit</h3>
+            <pre id="outputView" class="code-block muted">Le résultat apparaîtra ici.</pre>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script src="script-fixed.js"></script>
+</body>
+</html>

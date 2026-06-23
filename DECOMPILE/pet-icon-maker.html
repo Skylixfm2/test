@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>PS99 Icon Generator</title>
+  <link rel="stylesheet" href="pet-icon-maker.css?v=20260422b">
+  <style>
+    .gmail-auth { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin: 0 0 18px; padding: 14px 16px; border-radius: 12px; background: rgba(9, 17, 39, 0.88); border: 1px solid rgba(0, 178, 255, 0.22); color: #f7fbff; flex-wrap: wrap; }
+    .gmail-auth-copy { display: grid; gap: 3px; }
+    .gmail-auth-copy span { color: #aab5c8; font-size: 0.92rem; }
+    .gmail-auth-form { display: flex; gap: 10px; flex: 1 1 360px; justify-content: flex-end; flex-wrap: wrap; }
+    .gmail-auth-form input { flex: 1 1 260px; min-height: 42px; border-radius: 10px; border: 1px solid rgba(65, 149, 217, 0.28); background: rgba(255,255,255,0.04); color: #ffffff; padding: 0 13px; }
+    .gmail-auth-error { flex-basis: 100%; color: #ff9a9a; font-weight: 800; font-size: 0.9rem; text-align: right; }
+  </style>
+</head>
+<body>
+  <main class="maker-shell">
+    <nav class="maker-nav">
+      <a class="maker-link" href="app.html">Workspace</a>
+      <a class="maker-link" href="community.html">Community</a>
+      <a class="maker-link" href="post.html">Post</a>
+      <a class="maker-link" href="pet-icon-maker.html">PS99 Icons</a>
+      <a class="maker-link" href="store.html">Shop</a>
+      <a class="maker-link" href="orders.html">My Orders</a>
+    </nav>
+    <section class="gmail-auth" data-gmail-auth></section>
+
+    <section class="maker-hero">
+      <p class="maker-eyebrow">Local • Roblox • Pet Icon Builder</p>
+      <h1>PS99 Icon Generator</h1>
+    </section>
+
+    <section class="maker-topbar">
+      <div class="upload-row">
+        <label class="upload-inline-card" for="objFileInput">
+          <span>Upload .obj</span>
+          <strong id="objFileLabel">No OBJ selected</strong>
+        </label>
+        <input id="objFileInput" type="file" accept=".obj" hidden>
+
+        <label class="upload-inline-card" for="textureFileInput">
+          <span>Upload .png texture</span>
+          <strong id="textureFileLabel">No PNG selected</strong>
+        </label>
+        <input id="textureFileInput" type="file" accept=".png,.jpg,.jpeg,.webp" hidden>
+
+        <label class="upload-inline-card" for="backgroundImageInput">
+          <span>Upload background image</span>
+          <strong id="backgroundImageLabel">No background selected</strong>
+        </label>
+        <input id="backgroundImageInput" type="file" accept=".png,.jpg,.jpeg,.webp" hidden>
+      </div>
+      <div class="toolbar-actions">
+        <button id="renderButton" type="button" class="primary">Render Current</button>
+        <button id="resetButton" type="button">Reset</button>
+        <button id="saveConfigButton" type="button">Save Config</button>
+        <button id="duplicatePresetButton" type="button">Duplicate preset</button>
+        <label class="toolbar-file">
+          <input id="loadConfigInput" type="file" accept=".json" hidden>
+          <span>Load Config</span>
+        </label>
+      </div>
+      <div class="input-stack">
+        <label>
+          <span>Preset name</span>
+          <input id="presetNameInput" type="text" placeholder="My PS99 preset">
+        </label>
+        <label class="inline-select">
+          <span>Preset category</span>
+          <select id="presetCategorySelect">
+            <option value="ps99-normal">PS99 normal</option>
+            <option value="ps99-huge">PS99 huge</option>
+            <option value="soft">Soft</option>
+            <option value="glowy">Glowy</option>
+          </select>
+        </label>
+      </div>
+      <div class="toolbar-options">
+        <label class="inline-radio">
+          <input id="hugeIconToggle" type="checkbox">
+          <span>Huge Icon</span>
+        </label>
+        <label class="inline-select">
+          <span>Key Color</span>
+          <select id="keyColorSelect">
+            <option value="green">Green</option>
+            <option value="blue">Blue</option>
+            <option value="purple">Purple</option>
+            <option value="red">Red</option>
+            <option value="gold">Gold</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="maker-layout">
+      <div class="maker-controls">
+        <div class="tabs">
+          <button class="tab-button active" data-tab="pet-position" type="button">Pet Camera</button>
+          <button class="tab-button" data-tab="render-settings" type="button">Render Settings</button>
+        </div>
+
+        <section class="panel tab-panel active" data-panel="pet-position">
+          <h3>Pet Camera Position</h3>
+          <div class="field-grid">
+            <label><span>Pos X (left/right)</span><input id="petPosX" type="number" step="0.001" value="139.241"></label>
+            <label><span>Pos Y (up/down)</span><input id="petPosY" type="number" step="0.001" value="11.2"></label>
+            <label><span>Pos Z (forward/back)</span><input id="petPosZ" type="number" step="0.001" value="-0.4"></label>
+            <label><span>Rot X (tilt up/down)</span><input id="petRotX" type="number" step="0.001" value="-6"></label>
+            <label><span>Rot Y (turn left/right)</span><input id="petRotY" type="number" step="0.001" value="-198"></label>
+            <label><span>Rot Z (lean)</span><input id="petRotZ" type="number" step="0.001" value="0"></label>
+            <label><span>Zoom % (icon zoom)</span><input id="petZoomPercent" type="number" min="10" max="2000" step="1" value="100"></label>
+            <label><span>Lift X (screen move)</span><input id="petLiftX" type="number" min="-400" max="400" step="1" value="0"></label>
+            <label><span>Lift Y (screen move)</span><input id="petLiftY" type="number" min="-400" max="400" step="1" value="0"></label>
+          </div>
+          <div class="camera-helper-row">
+            <button id="lookUpButton" type="button">Look up</button>
+            <button id="lookDownButton" type="button">Look down</button>
+            <label class="camera-step-label">
+              <span>Tilt step</span>
+              <input id="tiltStepInput" type="number" min="0.1" max="20" step="0.1" value="2">
+            </label>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-panel="render-settings">
+          <h3>Pet Icon Output</h3>
+          <div class="field-grid compact">
+            <label><span>Canvas</span><input id="canvasSizeInput" type="number" min="128" max="1024" step="1" value="400"></label>
+          </div>
+          <input id="scaleInput" type="hidden" value="0.96">
+          <input id="shiftXInput" type="hidden" value="0">
+          <input id="shiftYInput" type="hidden" value="0">
+          <div class="slider-stack">
+            <label>
+              <span>Outline Size</span>
+              <input id="outlineSizeInput" type="range" min="0" max="18" step="0.1" value="5.5">
+              <strong id="outlineSizeValue">5.5</strong>
+            </label>
+            <label>
+              <span>Outline Softness</span>
+              <input id="outlineSoftnessInput" type="range" min="0" max="8" step="0.1" value="0.8">
+              <strong id="outlineSoftnessValue">0.8</strong>
+            </label>
+            <label>
+              <span>Outer Outline</span>
+              <input id="outerOutlineInput" type="range" min="0" max="24" step="0.1" value="0">
+              <strong id="outerOutlineValue">0.0</strong>
+            </label>
+            <label>
+              <span>Brightness</span>
+              <input id="brightnessInput" type="range" min="40" max="180" step="1" value="100">
+              <strong id="brightnessValue">100%</strong>
+            </label>
+            <label>
+              <span>Contrast</span>
+              <input id="contrastInput" type="range" min="40" max="180" step="1" value="100">
+              <strong id="contrastValue">100%</strong>
+            </label>
+            <label>
+              <span>Saturation</span>
+              <input id="saturationInput" type="range" min="0" max="200" step="1" value="100">
+              <strong id="saturationValue">100%</strong>
+            </label>
+            <label>
+              <span>Light Strength</span>
+              <input id="lightStrengthInput" type="range" min="0" max="100" step="1" value="25">
+              <strong id="lightStrengthValue">25%</strong>
+            </label>
+            <label>
+              <span>Soft Light</span>
+              <input id="lightSoftnessInput" type="range" min="0" max="100" step="1" value="70">
+              <strong id="lightSoftnessValue">70%</strong>
+            </label>
+            <label>
+              <span>Shadow</span>
+              <input id="shadowStrengthInput" type="range" min="0" max="100" step="1" value="0">
+              <strong id="shadowStrengthValue">0%</strong>
+            </label>
+            <label>
+              <span>Shadow Blur</span>
+              <input id="shadowBlurInput" type="range" min="0" max="100" step="1" value="18">
+              <strong id="shadowBlurValue">18%</strong>
+            </label>
+            <label>
+              <span>Glow</span>
+              <input id="glowStrengthInput" type="range" min="0" max="100" step="1" value="0">
+              <strong id="glowStrengthValue">0%</strong>
+            </label>
+            <label>
+              <span>Glow Softness</span>
+              <input id="glowBlurInput" type="range" min="0" max="100" step="1" value="25">
+              <strong id="glowBlurValue">25%</strong>
+            </label>
+            <label>
+              <span>Background Blur</span>
+              <input id="backgroundBlurInput" type="range" min="0" max="24" step="1" value="0">
+              <strong id="backgroundBlurValue">0px</strong>
+            </label>
+            <label>
+              <span>Corner Radius</span>
+              <input id="cornerRadiusInput" type="range" min="0" max="64" step="1" value="18">
+              <strong id="cornerRadiusValue">18px</strong>
+            </label>
+          </div>
+          <div class="field-grid compact color-grid">
+            <label><span>Stroke Color</span><input id="strokeColorInput" type="color" value="#000000"></label>
+            <label><span>Square Stroke Color</span><input id="squareStrokeColorInput" type="color" value="#000000"></label>
+          </div>
+          <div class="field-grid compact render-flags">
+            <label class="toggle-check">
+              <input id="showTextureOverlayInput" type="checkbox" checked>
+              <span>Use texture overlay</span>
+            </label>
+            <label class="toggle-check">
+              <input id="transparentBackgroundInput" type="checkbox">
+              <span>Transparent background</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel preset-history-panel">
+          <div class="preset-history-header">
+            <div>
+              <p class="preset-history-eyebrow">Session History</p>
+              <h3>Icon Presets</h3>
+            </div>
+            <div class="preset-history-toolbar">
+              <button id="compactPresetHistoryButton" type="button">Compact</button>
+              <button id="clearPresetHistoryButton" type="button">Clear</button>
+            </div>
+          </div>
+          <input id="presetHistorySearchInput" class="preset-history-search" type="search" placeholder="Search saved icon params..." autocomplete="off">
+          <div id="presetHistoryList" class="preset-history-list empty-list">No presets saved yet.</div>
+        </section>
+      </div>
+
+      <div class="preview-panel">
+        <div class="preview-header">
+          <h3>Preview</h3>
+          <div class="preview-actions">
+            <button id="toggleSquareStrokeButton" type="button">Square stroke</button>
+            <button id="toggleBeforeAfterButton" type="button">Before / After</button>
+            <button id="faceCenterButton" type="button">Face center</button>
+            <button id="randomPoseButton" type="button">Random pose</button>
+            <button id="savePresetToHistoryButton" type="button">Add params to history</button>
+            <button id="copyAssetPairButton" type="button">Copy IDs</button>
+            <button id="copyImageWithBackgroundButton" type="button">Copy image + bg</button>
+            <button id="copyImageTransparentButton" type="button">Copy image no bg</button>
+            <button id="downloadPreviewButton" type="button">Download PNG</button>
+            <button id="downloadOutlineOnlyButton" type="button">Outline only export</button>
+            <button id="exportPresetCardButton" type="button">Export preset card</button>
+          </div>
+        </div>
+        <div class="preview-stage" id="previewStage">
+          <canvas id="previewCanvas" width="400" height="400"></canvas>
+        </div>
+        <div class="preview-meta">
+          <div class="preview-meta-card">
+            <span>Model source</span>
+            <strong id="modelSourceLabel">No model loaded</strong>
+          </div>
+          <div class="preview-meta-card">
+            <span>Texture source</span>
+            <strong id="textureSourceLabel">No texture loaded</strong>
+          </div>
+        </div>
+        <div id="statusMessage" class="status-message">Upload an OBJ and a texture, then click Render Current to build a PS99 icon.</div>
+      </div>
+    </section>
+  </main>
+
+  <div id="confirmModal" class="confirm-modal" hidden>
+    <div class="confirm-card">
+      <h3 id="confirmTitle">Are you sure?</h3>
+      <p id="confirmMessage">This action cannot be undone.</p>
+      <div class="confirm-actions">
+        <button id="confirmCancelButton" type="button">Cancel</button>
+        <button id="confirmOkButton" type="button" class="primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script src="pet-icon-maker.js?v=20260422f"></script>
+</body>
+</html>

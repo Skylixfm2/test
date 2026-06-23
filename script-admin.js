@@ -694,5 +694,3 @@ window.addEventListener("storage", () => {
   renderAccountBar();
   renderAdminPanel();
 });
-
-
