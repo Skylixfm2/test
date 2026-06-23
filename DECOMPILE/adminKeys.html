@@ -17,6 +17,8 @@
     .key-code { color: #61f0ff; font-family: Consolas, "Cascadia Code", monospace; font-weight: 900; overflow-wrap: anywhere; }
     .key-meta { color: #98a6ba; font-size: 0.9rem; }
     .keys-help { margin: 0 0 14px; color: #aab5c8; line-height: 1.45; }
+    .keys-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 14px; }
+    .keys-toolbar select { min-width: 190px; min-height: 42px; }
     .access-denied, .empty-keys { padding: 22px; color: #98a6ba; }
     @media (max-width: 760px) {
       .keys-form, .key-card { grid-template-columns: 1fr; }
@@ -69,7 +71,13 @@
       <section class="panel">
         <div class="share-header">
           <h2>Keys disponibles</h2>
-          <button class="ghost-button" type="button" onclick="exportKeys()">Export JSON</button>
+          <div class="admin-shop-actions">
+            <button class="ghost-button" type="button" onclick="exportKeys()">Export JSON</button>
+            <button class="ghost-button" type="button" onclick="deleteVisibleKeys()">Tout supprimer</button>
+          </div>
+        </div>
+        <div class="keys-toolbar">
+          <select id="keyTypeFilter" class="account-input" aria-label="Trier par type de key"></select>
         </div>
         <div id="keysBoard" class="keys-board"></div>
       </section>
@@ -88,6 +96,7 @@
       { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: "rewards/[] Adopt Me! (Decompile).rbxl", allowMultiple: false, fulfillment: "key" }
     ];
     const params = new URLSearchParams(location.search);
+    let activeTypeFilter = "all";
 
     function isAdmin() {
       return localStorage.getItem(EMAIL_VERIFIED_KEY) === "true"
@@ -159,6 +168,13 @@
       return rawKey.includes("_") ? rawKey : `${type}_${rawKey}`;
     }
 
+    function visibleKeys() {
+      const keys = getKeys();
+      return activeTypeFilter === "all"
+        ? keys
+        : keys.filter((entry) => normalizeKeyType(entry.type || "Key") === activeTypeFilter);
+    }
+
     function generateKeys() {
       if (!isAdmin()) return;
       const productId = document.querySelector("#keyProduct").value;
@@ -180,7 +196,9 @@
         createdAt: new Date().toISOString()
       }));
       saveKeys([...created, ...keys]);
+      activeTypeFilter = type;
       syncProductStock(productId);
+      renderTypeFilter();
       renderKeys();
     }
 
@@ -192,17 +210,33 @@
       renderKeys();
     }
 
+    function deleteVisibleKeys() {
+      if (!isAdmin()) return;
+      const keysToDelete = visibleKeys();
+      if (!keysToDelete.length) return;
+      const label = activeTypeFilter === "all" ? "toutes les keys" : `les keys ${activeTypeFilter}`;
+      if (!confirm(`Supprimer ${label} ?`)) return;
+      const ids = new Set(keysToDelete.map((entry) => entry.id));
+      const productIds = new Set(keysToDelete.map((entry) => entry.productId).filter(Boolean));
+      saveKeys(getKeys().filter((entry) => !ids.has(entry.id)));
+      productIds.forEach(syncProductStock);
+      activeTypeFilter = "all";
+      renderTypeFilter();
+      renderKeys();
+    }
+
     async function copyKey(key) {
       await navigator.clipboard.writeText(key);
     }
 
     function exportKeys() {
-      const data = JSON.stringify(getKeys().map((entry) => ({ ...entry, fullKey: fullKey(entry) })), null, 2);
+      const exportedKeys = visibleKeys();
+      const data = JSON.stringify(exportedKeys.map((entry) => ({ ...entry, fullKey: fullKey(entry) })), null, 2);
       const blob = new Blob([data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const count = getKeys().length;
+      const count = exportedKeys.length;
       link.download = `${count}-key.json`;
       link.click();
       URL.revokeObjectURL(url);
@@ -217,9 +251,20 @@
       `).join("");
     }
 
+    function renderTypeFilter() {
+      const types = [...new Set(getKeys().map((entry) => normalizeKeyType(entry.type || "Key")))].sort((a, b) => a.localeCompare(b));
+      if (activeTypeFilter !== "all" && !types.includes(activeTypeFilter)) {
+        activeTypeFilter = "all";
+      }
+      document.querySelector("#keyTypeFilter").innerHTML = `
+        <option value="all" ${activeTypeFilter === "all" ? "selected" : ""}>Tous les types</option>
+        ${types.map((type) => `<option value="${type}" ${activeTypeFilter === type ? "selected" : ""}>${type}</option>`).join("")}
+      `;
+    }
+
     function renderKeys() {
       if (!isAdmin()) return;
-      const keys = getKeys();
+      const keys = visibleKeys();
       const products = new Map(getProducts().map((product) => [product.id, product.name]));
       document.querySelector("#keysCount").textContent = `${keys.length} key${keys.length === 1 ? "" : "s"}`;
       const board = document.querySelector("#keysBoard");
@@ -246,8 +291,14 @@
       document.querySelector("#keysPanel").hidden = !allowed;
       if (!allowed) return;
       renderProductOptions();
+      renderTypeFilter();
       renderKeys();
     }
+
+    document.querySelector("#keyTypeFilter").addEventListener("change", (event) => {
+      activeTypeFilter = event.target.value || "all";
+      renderKeys();
+    });
 
     renderPage();
     window.addEventListener("gmail-auth-change", renderPage);
