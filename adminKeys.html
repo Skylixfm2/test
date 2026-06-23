@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Keys</title>
+  <link rel="stylesheet" href="styles.css?v=lusive-store">
+  <style>
+    .keys-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin: 28px 0; flex-wrap: wrap; }
+    .keys-head h1 { margin: 0; font-size: clamp(2.2rem, 5vw, 4.4rem); }
+    .keys-grid { display: grid; gap: 18px; }
+    .keys-form { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(150px, 0.9fr) 130px 180px; gap: 12px; align-items: end; width: min(100%, 900px); }
+    .keys-form label { display: grid; gap: 8px; color: #98a6ba; font-weight: 900; font-size: 0.82rem; text-transform: uppercase; }
+    .keys-form label,
+    .keys-form select,
+    .keys-form input,
+    .keys-form button { min-width: 0; }
+    .keys-form select,
+    .keys-form input { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .keys-form button { width: 100%; justify-self: stretch; }
+    .keys-board { display: grid; gap: 10px; }
+    .key-card { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 14px; border-radius: 12px; background: rgba(10, 18, 35, 0.92); border: 1px solid rgba(97, 240, 255, 0.16); color: #f7fbff; }
+    .key-code { color: #61f0ff; font-family: Consolas, "Cascadia Code", monospace; font-weight: 900; overflow-wrap: anywhere; }
+    .key-meta { color: #98a6ba; font-size: 0.9rem; }
+    .keys-help { margin: 0 0 14px; color: #aab5c8; line-height: 1.45; }
+    .keys-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 14px; }
+    .keys-toolbar select { min-width: 190px; min-height: 42px; }
+    .access-denied, .empty-keys { padding: 22px; color: #98a6ba; }
+    @media (max-width: 760px) {
+      .keys-form, .key-card { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="top-nav">
+      <a class="page-link" href="store.html">Shop</a>
+      <a class="page-link" href="orders.html">My Orders</a>
+      <a class="page-link" href="adminOrders.html">Admin Orders</a>
+      <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link active" href="adminKeys.html">Admin Keys</a>
+      <a class="page-link" href="admin.html">Admin</a>
+    </nav>
+    <section class="gmail-auth" data-gmail-auth></section>
+
+    <section class="keys-head">
+      <div>
+        <p class="eyebrow">Generation de keys</p>
+        <h1>Admin Keys</h1>
+      </div>
+      <span id="accessBadge" class="history-pill">verification</span>
+    </section>
+
+    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis.</section>
+
+    <section id="keysPanel" class="keys-grid" hidden>
+      <section class="panel">
+        <div class="share-header">
+          <h2>Generer des keys</h2>
+          <span id="keysCount" class="history-pill">0 keys</span>
+        </div>
+        <p class="keys-help">C'est ici que tu mets les keys : choisis un produit de type key, mets le nombre, puis clique sur Generer.</p>
+        <div class="keys-form">
+          <label>Produit
+            <select id="keyProduct" class="account-input"></select>
+          </label>
+          <label>Type
+            <input id="keyType" class="account-input" type="text" value="MadeIcon" placeholder="ex: MadeIcon">
+          </label>
+          <label>Nombre
+            <input id="keyAmount" class="account-input" type="number" min="1" max="500" value="10">
+          </label>
+          <button type="button" onclick="generateKeys()">Generer</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="share-header">
+          <h2>Keys disponibles</h2>
+          <div class="admin-shop-actions">
+            <button class="ghost-button" type="button" onclick="exportKeys()">Export JSON</button>
+            <button class="ghost-button" type="button" onclick="deleteVisibleKeys()">Tout supprimer</button>
+          </div>
+        </div>
+        <div class="keys-toolbar">
+          <select id="keyTypeFilter" class="account-input" aria-label="Trier par type de key"></select>
+        </div>
+        <div id="keysBoard" class="keys-board"></div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script>
+    const STORE_PRODUCTS_KEY = "lusive-store-products";
+    const STORE_KEYS_KEY = "lusive-store-keys";
+    const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
+    const EMAIL_VERIFIED_KEY = "lusive-email-verified";
+    const ADMIN_EMAIL = "solarydigix@gmail.com";
+    const defaultProducts = [
+      { id: "codes", name: "Access Codes", price: 0.10, robuxPrice: 1000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: "rewards/[] Adopt Me! (Decompile).rbxl", allowMultiple: false, fulfillment: "key" }
+    ];
+    const params = new URLSearchParams(location.search);
+    let activeTypeFilter = "all";
+
+    function isAdmin() {
+      return localStorage.getItem(EMAIL_VERIFIED_KEY) === "true"
+        && String(localStorage.getItem(CUSTOMER_EMAIL_KEY) || "").trim().toLowerCase() === ADMIN_EMAIL;
+    }
+
+    function getProducts() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "[]");
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      } catch {
+      }
+      return defaultProducts;
+    }
+
+    function saveProducts(products) {
+      localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+    }
+
+    function getKeys() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_KEYS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveKeys(keys) {
+      localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+    }
+
+    function syncProductStock(productId) {
+      let savedProducts = [];
+      try {
+        savedProducts = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "[]");
+      } catch {
+        savedProducts = [];
+      }
+      if (!Array.isArray(savedProducts) || !savedProducts.length) return;
+      const availableCount = getKeys().filter((entry) => entry.productId === productId && entry.status === "available").length;
+      saveProducts(savedProducts.map((product) => product.id === productId
+        ? { ...product, stock: availableCount <= 0 ? "Out of stock" : `${availableCount} in stock` }
+        : product));
+    }
+
+    function createKey(existing) {
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let key = "";
+      do {
+        const bytes = new Uint8Array(15);
+        crypto.getRandomValues(bytes);
+        key = Array.from(bytes, (value) => alphabet[value % alphabet.length]).join("");
+      } while (existing.has(key));
+      existing.add(key);
+      return key;
+    }
+
+    function normalizeKeyType(type) {
+      return String(type || "Key")
+        .trim()
+        .replace(/[^A-Za-z0-9-]/g, "")
+        .slice(0, 24) || "Key";
+    }
+
+    function fullKey(entry) {
+      const type = normalizeKeyType(entry.type || "Key");
+      const rawKey = String(entry.key || "");
+      return rawKey.includes("_") ? rawKey : `${type}_${rawKey}`;
+    }
+
+    function visibleKeys() {
+      const keys = getKeys();
+      return activeTypeFilter === "all"
+        ? keys
+        : keys.filter((entry) => normalizeKeyType(entry.type || "Key") === activeTypeFilter);
+    }
+
+    function generateKeys() {
+      if (!isAdmin()) return;
+      const productId = document.querySelector("#keyProduct").value;
+      const type = normalizeKeyType(document.querySelector("#keyType").value);
+      const amount = Math.min(500, Math.max(1, Number(document.querySelector("#keyAmount").value || 1)));
+      if (!productId) {
+        alert("Choisis un produit.");
+        return;
+      }
+      const keys = getKeys();
+      const existing = new Set(keys.flatMap((entry) => [entry.key, fullKey(entry)]));
+      const created = Array.from({ length: amount }, () => ({
+        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+        productId,
+        type,
+        key: createKey(existing),
+        status: "available",
+        orderId: "",
+        createdAt: new Date().toISOString()
+      }));
+      saveKeys([...created, ...keys]);
+      activeTypeFilter = type;
+      syncProductStock(productId);
+      renderTypeFilter();
+      renderKeys();
+    }
+
+    function deleteKey(id) {
+      if (!isAdmin()) return;
+      const key = getKeys().find((entry) => entry.id === id);
+      saveKeys(getKeys().filter((entry) => entry.id !== id));
+      if (key?.productId) syncProductStock(key.productId);
+      renderKeys();
+    }
+
+    function deleteVisibleKeys() {
+      if (!isAdmin()) return;
+      const keysToDelete = visibleKeys();
+      if (!keysToDelete.length) return;
+      const label = activeTypeFilter === "all" ? "toutes les keys" : `les keys ${activeTypeFilter}`;
+      if (!confirm(`Supprimer ${label} ?`)) return;
+      const ids = new Set(keysToDelete.map((entry) => entry.id));
+      const productIds = new Set(keysToDelete.map((entry) => entry.productId).filter(Boolean));
+      saveKeys(getKeys().filter((entry) => !ids.has(entry.id)));
+      productIds.forEach(syncProductStock);
+      activeTypeFilter = "all";
+      renderTypeFilter();
+      renderKeys();
+    }
+
+    async function copyKey(key) {
+      await navigator.clipboard.writeText(key);
+    }
+
+    function exportKeys() {
+      const exportedKeys = visibleKeys();
+      const data = JSON.stringify(exportedKeys.map((entry) => ({ ...entry, fullKey: fullKey(entry) })), null, 2);
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const count = exportedKeys.length;
+      link.download = `${count}-key.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderProductOptions() {
+      const products = getProducts();
+      const keyProducts = products.filter((product) => product.fulfillment === "key");
+      const selected = params.get("product") || keyProducts[0]?.id || products[0]?.id || "";
+      document.querySelector("#keyProduct").innerHTML = (keyProducts.length ? keyProducts : products).map((product) => `
+        <option value="${product.id}" ${product.id === selected ? "selected" : ""}>${product.name}</option>
+      `).join("");
+      const selectedProduct = (keyProducts.length ? keyProducts : products).find((product) => product.id === selected);
+      document.querySelector("#keyType").value = params.get("type") || selectedProduct?.keyType || document.querySelector("#keyType").value || "Key";
+    }
+
+    function renderTypeFilter() {
+      const types = [...new Set(getKeys().map((entry) => normalizeKeyType(entry.type || "Key")))].sort((a, b) => a.localeCompare(b));
+      if (activeTypeFilter !== "all" && !types.includes(activeTypeFilter)) {
+        activeTypeFilter = "all";
+      }
+      document.querySelector("#keyTypeFilter").innerHTML = `
+        <option value="all" ${activeTypeFilter === "all" ? "selected" : ""}>Tous les types</option>
+        ${types.map((type) => `<option value="${type}" ${activeTypeFilter === type ? "selected" : ""}>${type}</option>`).join("")}
+      `;
+    }
+
+    function renderKeys() {
+      if (!isAdmin()) return;
+      const keys = visibleKeys();
+      const products = new Map(getProducts().map((product) => [product.id, product.name]));
+      document.querySelector("#keysCount").textContent = `${keys.length} key${keys.length === 1 ? "" : "s"}`;
+      const board = document.querySelector("#keysBoard");
+      if (!keys.length) {
+        board.innerHTML = `<section class="empty-keys">Aucune key generee.</section>`;
+        return;
+      }
+      board.innerHTML = keys.map((entry) => `
+        <article class="key-card">
+          <div>
+            <div class="key-code">${fullKey(entry)}</div>
+            <div class="key-meta">${products.get(entry.productId) || entry.productId} | type: ${normalizeKeyType(entry.type || "Key")} | ${entry.status}${entry.orderId ? ` | ${entry.orderId}` : ""}</div>
+          </div>
+          <button class="ghost-button" type="button" onclick="copyKey('${fullKey(entry)}')">Copier</button>
+          <button class="ghost-button" type="button" onclick="deleteKey('${entry.id}')">Supprimer</button>
+        </article>
+      `).join("");
+    }
+
+    function renderPage() {
+      const allowed = isAdmin();
+      document.querySelector("#accessBadge").textContent = allowed ? "admin actif" : "acces bloque";
+      document.querySelector("#accessDenied").hidden = allowed;
+      document.querySelector("#keysPanel").hidden = !allowed;
+      if (!allowed) return;
+      renderProductOptions();
+      renderTypeFilter();
+      renderKeys();
+    }
+
+    document.querySelector("#keyTypeFilter").addEventListener("change", (event) => {
+      activeTypeFilter = event.target.value || "all";
+      renderKeys();
+    });
+
+    document.querySelector("#keyProduct").addEventListener("change", (event) => {
+      const product = getProducts().find((entry) => entry.id === event.target.value);
+      if (product?.keyType) {
+        document.querySelector("#keyType").value = product.keyType;
+      }
+    });
+
+    renderPage();
+    window.addEventListener("gmail-auth-change", renderPage);
+    window.addEventListener("storage", renderPage);
+  </script>
+</body>
+</html>

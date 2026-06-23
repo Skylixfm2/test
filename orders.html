@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Orders</title>
+  <link rel="stylesheet" href="styles.css?v=lusive-store">
+  <style>
+    .orders-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 28px 0; flex-wrap: wrap; }
+    .orders-head h1 { margin: 0; font-size: clamp(2.2rem, 5vw, 4.4rem); }
+    .orders-grid { display: grid; gap: 14px; }
+    .order-card { display: grid; gap: 14px; padding: 18px; border-radius: 12px; }
+    .order-top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .order-id-text { color: #61f0ff; font-family: Consolas, "Cascadia Code", monospace; overflow-wrap: anywhere; }
+    .order-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .order-meta div { padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.04); }
+    .order-meta span { display: block; color: #98a6ba; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; }
+    .status-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 6px 10px; border-radius: 999px; font-weight: 900; }
+    .status-pending { background: rgba(255, 209, 47, 0.16); color: #ffd12f; }
+    .status-accepted { background: rgba(74, 255, 173, 0.14); color: #4affa8; }
+    .status-rejected { background: rgba(255, 95, 95, 0.16); color: #ff7777; }
+    .order-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .empty-orders { padding: 22px; color: #98a6ba; }
+    .mail-login { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin: 0 0 18px; padding: 16px; border-radius: 12px; background: rgba(9, 17, 39, 0.88); border: 1px solid rgba(0, 178, 255, 0.22); flex-wrap: wrap; }
+    .mail-login strong { display: block; color: #ffffff; }
+    .mail-login span { color: #aab5c8; font-size: 0.92rem; }
+    .mail-login-form { display: flex; gap: 10px; flex: 1 1 360px; justify-content: flex-end; flex-wrap: wrap; }
+    .mail-login-form input { flex: 1 1 260px; min-height: 42px; border-radius: 10px; border: 1px solid rgba(65, 149, 217, 0.28); background: rgba(255,255,255,0.04); color: #ffffff; padding: 0 13px; }
+    .mail-login-form button { min-height: 42px; }
+    .mail-error { flex-basis: 100%; color: #ff9a9a; font-weight: 800; font-size: 0.9rem; text-align: right; }
+    @media (max-width: 820px) { .order-meta { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .order-meta { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="top-nav">
+      <a class="page-link" href="app.html">Workspace</a>
+      <a class="page-link" href="store.html">Shop</a>
+      <a class="page-link active" href="orders.html">My Orders</a>
+      <a class="page-link" href="adminOrders.html">Admin Orders</a>
+      <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link" href="adminKeys.html">Admin Keys</a>
+      <a class="page-link" href="admin.html">Admin</a>
+    </nav>
+
+    <section class="orders-head">
+      <div>
+        <p class="eyebrow">Commandes boutique</p>
+        <h1>My Orders</h1>
+      </div>
+      <span id="ordersBadge" class="history-pill">0 orders</span>
+    </section>
+
+    <section class="gmail-auth" data-gmail-auth></section>
+
+    <section id="ordersGrid" class="orders-grid"></section>
+  </main>
+
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script>
+    const STORE_ORDERS_KEY = "lusive-store-orders";
+    const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
+    const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+
+    function normalizeEmail(email) {
+      return String(email || "").trim().toLowerCase();
+    }
+
+    function isValidGmail(email) {
+      return /^[^\s@]+@gmail\.com$/i.test(String(email || "").trim());
+    }
+
+    function getCustomerEmail() {
+      return normalizeEmail(localStorage.getItem(CUSTOMER_EMAIL_KEY));
+    }
+
+    function setCustomerEmail(email) {
+      localStorage.setItem(CUSTOMER_EMAIL_KEY, normalizeEmail(email));
+      window.gmailAuth?.render?.();
+      renderOrders();
+    }
+
+    function clearCustomerEmail() {
+      localStorage.removeItem(CUSTOMER_EMAIL_KEY);
+      window.gmailAuth?.render?.();
+      renderOrders();
+    }
+
+    function getOrders() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_ORDERS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveOrders(orders) {
+      localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+    }
+
+    function statusClass(status) {
+      return status === "accepted" ? "status-accepted" : status === "rejected" ? "status-rejected" : "status-pending";
+    }
+
+    function renderOrders() {
+      const email = getCustomerEmail();
+      const orders = email ? getOrders().filter((order) => normalizeEmail(order.customerEmail) === email) : [];
+      document.querySelector("#ordersBadge").textContent = `${orders.length} order${orders.length === 1 ? "" : "s"}`;
+      const grid = document.querySelector("#ordersGrid");
+
+      if (!email) {
+        grid.innerHTML = `<section class="panel empty-orders">Connecte-toi avec ton Gmail pour voir tes commandes.</section>`;
+        return;
+      }
+
+      if (!orders.length) {
+        grid.innerHTML = `<section class="panel empty-orders">Aucune commande pour ${email}.</section>`;
+        return;
+      }
+
+      grid.innerHTML = orders.map((order) => `
+        <article class="panel order-card">
+          <div class="order-top">
+            <div>
+              <strong>Commande</strong>
+              <div class="order-id-text">${order.id}</div>
+            </div>
+            <span class="status-pill ${statusClass(order.status)}">${order.status || "pending"}</span>
+          </div>
+          <div class="order-meta">
+            <div><span>Pseudo compte</span>${order.customerPseudo || "-"}</div>
+            <div><span>Email compte</span>${order.customerEmail || "-"}</div>
+            <div><span>Email commande</span>${order.contactEmail || "-"}</div>
+            <div><span>Mail PayPal</span>${order.paypalSenderEmail || "-"}</div>
+            <div><span>IBAN</span>${order.payerIban || "-"}</div>
+            <div><span>Total</span>${order.totalLabel || money.format(Number(order.total || 0))}</div>
+            <div><span>Paiement</span>${order.provider || "-"}</div>
+          </div>
+          <div class="order-meta">
+            <div><span>Date</span>${order.createdAt ? new Date(order.createdAt).toLocaleString("fr-FR") : "-"}</div>
+            <div><span>Pseudo Roblox</span>${order.username || "-"}</div>
+            <div><span>Produits</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
+            <div><span>Keys</span>${order.status === "accepted" ? (order.assignedKeys || []).join(", ") || "-" : "apres acceptation"}</div>
+            <div><span>Preuve transaction</span>${order.transactionProofName || "-"}</div>
+            <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
+            <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>
+          </div>
+          ${order.status === "accepted" ? `
+            <div class="order-actions">
+              <a class="page-link active" href="claim.html?id=${encodeURIComponent(order.id)}">Claim</a>
+            </div>
+          ` : ""}
+        </article>
+      `).join("");
+    }
+
+    window.addEventListener("gmail-auth-change", renderOrders);
+    renderOrders();
+  </script>
+</body>
+</html>

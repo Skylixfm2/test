@@ -1,0 +1,13 @@
+{
+  "name": "lusive-shop-functions",
+  "description": "Secure Discord webhook proxy for Lusive shop",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.2.0"
+  }
+}
