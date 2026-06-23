@@ -14,6 +14,7 @@
     .claim-file { color: #61f0ff; overflow-wrap: anywhere; font-family: Consolas, "Cascadia Code", monospace; }
     .claim-actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .claim-error { color: #ffb7b7; }
+    .claim-status { color: #61f0ff; font-weight: 900; }
     @media (max-width: 640px) { .claim-meta { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -36,6 +37,7 @@
   <script>
     const STORE_ORDERS_KEY = "lusive-store-orders";
     const CLAIM_CUSTOMER_EMAIL_KEY = "lusive-customer-email";
+    const CLAIM_PROBLEM_ENDPOINT = "https://skylixfm-shop.solarydigix.workers.dev/admin-order";
     const DEFAULT_REWARD_FILE = "rewards/[] Adopt Me! (Decompile).rbxl";
     const params = new URLSearchParams(location.search);
     const orderId = params.get("id") || "";
@@ -55,6 +57,39 @@
 
     function getCustomerEmail() {
       return window.gmailAuth?.getEmail?.() || normalizeEmail(localStorage.getItem(CLAIM_CUSTOMER_EMAIL_KEY));
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function reportProblem(orderId) {
+      const order = getOrders().find((entry) => entry.id === orderId);
+      if (!order) return;
+      const reason = prompt("Explique le probleme pour ouvrir un ticket Discord :");
+      if (reason === null || !reason.trim()) return;
+      fetch(CLAIM_PROBLEM_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order, status: "problem", reason: reason.trim() })
+      }).then(() => {
+        document.querySelector("#claimProblemStatus").textContent = "Probleme envoye au Discord.";
+      }).catch(() => {
+        document.querySelector("#claimProblemStatus").textContent = "Impossible d'envoyer le probleme.";
+      });
+    }
+
+    function copyAccountDelivery(orderId) {
+      const order = getOrders().find((entry) => entry.id === orderId);
+      if (!order) return;
+      const login = order.deliveryLogin || order.deliveryAccounts || "";
+      const password = order.deliveryPassword || "";
+      navigator.clipboard.writeText(`Mail/pseudo: ${login}\nMot de passe: ${password}`);
     }
 
     function renderClaim() {
@@ -78,6 +113,28 @@
 
       const product = (order.products || [])[0] || {};
       const assignedKeys = Array.isArray(order.assignedKeys) ? order.assignedKeys : [];
+      if (product.fulfillment === "account") {
+        const login = order.deliveryLogin || order.deliveryAccounts || "";
+        const password = order.deliveryPassword || "";
+        content.innerHTML = `
+          <p class="eyebrow">Compte disponible</p>
+          <h1>Claim Account</h1>
+          <div class="claim-meta">
+            <div><span>Commande ID</span>${escapeHtml(order.id)}</div>
+            <div><span>Produit</span>${escapeHtml(product.name || "-")}</div>
+            <div><span>Mail / pseudo</span><span class="claim-file">${escapeHtml(login || "-")}</span></div>
+            <div><span>Mot de passe</span><span class="claim-file">${escapeHtml(password || "-")}</span></div>
+          </div>
+          <div class="claim-actions">
+            <button class="page-link active" type="button" onclick="copyAccountDelivery('${order.id}')">Copier les identifiants</button>
+            <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Probleme / ticket Discord</button>
+            <a class="ghost-button" href="orders.html">Retour My Orders</a>
+          </div>
+          <div id="claimProblemStatus" class="claim-status"></div>
+        `;
+        return;
+      }
+
       if (product.fulfillment === "key" || product.id === "codes") {
         content.innerHTML = `
           <p class="eyebrow">Key disponible</p>
@@ -90,8 +147,10 @@
           </div>
           <div class="claim-actions">
             <button class="page-link active" type="button" onclick="navigator.clipboard.writeText('${assignedKeys.join("\\n")}')">Copier la key</button>
+            <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Probleme / ticket Discord</button>
             <a class="ghost-button" href="orders.html">Retour My Orders</a>
           </div>
+          <div id="claimProblemStatus" class="claim-status"></div>
         `;
         return;
       }
@@ -109,8 +168,10 @@
         </div>
         <div class="claim-actions">
           <a class="page-link active" href="${rewardHref}" download>Telecharger le reward</a>
+          <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Probleme / ticket Discord</button>
           <a class="ghost-button" href="orders.html">Retour My Orders</a>
         </div>
+        <div id="claimProblemStatus" class="claim-status"></div>
       `;
     }
 

@@ -172,11 +172,12 @@ async function handleAdminOrder(request, env) {
     ? order.products.map((item) => `${item.name || item.id} x${item.quantity || 1}`).join(", ")
     : cleanText(order.productName || order.productId);
 
+  const statusLabel = status === "accepted" ? "acceptee" : status === "problem" ? "probleme / ticket" : "refusee";
   await sendDiscordJson(env.ORDER_WEBHOOK_URL, {
-    content: `Commande ${status === "accepted" ? "acceptee" : "refusee"}: ${cleanText(order.id)}`,
+    content: `Commande ${statusLabel}: ${cleanText(order.id)}`,
     embeds: [{
-      title: status === "accepted" ? "Commande acceptee" : "Commande refusee / probleme",
-      color: status === "accepted" ? 0x4affad : 0xff5f5f,
+      title: status === "accepted" ? "Commande acceptee" : status === "problem" ? "Ticket / probleme client" : "Commande refusee",
+      color: status === "accepted" ? 0x4affad : status === "problem" ? 0xffd12f : 0xff5f5f,
       fields: [
         { name: "Commande", value: cleanText(order.id), inline: false },
         { name: "Produit", value: productLabel || "-", inline: false },

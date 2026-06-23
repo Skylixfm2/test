@@ -154,7 +154,7 @@
             <div><span>Pseudo Roblox</span>${order.username || "-"}</div>
             <div><span>Produits</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
             <div><span>Keys</span>${order.status === "accepted" ? (order.assignedKeys || []).join(", ") || "-" : "apres acceptation"}</div>
-            <div><span>Compte</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryAccounts || "-") : "apres acceptation"}</div></div>
+            <div><span>Compte</span><div class="delivery-note">${order.status === "accepted" ? "Disponible via Claim" : "apres acceptation"}</div></div>
             <div><span>Raison refus</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
             <div><span>Preuve transaction</span>${order.transactionProofName || "-"}</div>
             <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>

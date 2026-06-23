@@ -226,16 +226,22 @@
 
     function setOrderStatus(id, status) {
       if (!isAdmin()) return;
-      let deliveryAccounts = "";
+      let deliveryLogin = "";
+      let deliveryPassword = "";
       let rejectReason = "";
 
       const currentOrder = getOrders().find((order) => order.id === id);
       if (!currentOrder) return;
 
       if (status === "accepted" && isAccountOrder(currentOrder)) {
-        deliveryAccounts = prompt("Infos du compte a livrer (ex: login, id, note). Ne mets que des comptes autorises a vendre.", currentOrder.deliveryAccounts || "");
-        if (deliveryAccounts === null || !deliveryAccounts.trim()) {
-          alert("Mets les infos du compte avant d'accepter.");
+        deliveryLogin = prompt("Mail / pseudo du compte a livrer :", currentOrder.deliveryLogin || "");
+        if (deliveryLogin === null || !deliveryLogin.trim()) {
+          alert("Mets le mail/pseudo du compte avant d'accepter.");
+          return;
+        }
+        deliveryPassword = prompt("Mot de passe du compte a livrer :", currentOrder.deliveryPassword || "");
+        if (deliveryPassword === null || !deliveryPassword.trim()) {
+          alert("Mets le mot de passe avant d'accepter.");
           return;
         }
       }
@@ -255,7 +261,11 @@
         reviewedOrder = {
           ...nextOrder,
           status,
-          deliveryAccounts: deliveryAccounts.trim() || nextOrder.deliveryAccounts || "",
+          deliveryLogin: deliveryLogin.trim() || nextOrder.deliveryLogin || "",
+          deliveryPassword: deliveryPassword.trim() || nextOrder.deliveryPassword || "",
+          deliveryAccounts: deliveryLogin.trim()
+            ? `Mail/pseudo: ${deliveryLogin.trim()}\nMot de passe: ${deliveryPassword.trim()}`
+            : nextOrder.deliveryAccounts || "",
           rejectReason: rejectReason.trim() || nextOrder.rejectReason || "",
           reviewedAt: new Date().toISOString()
         };
@@ -316,7 +326,8 @@
           <div class="order-meta">
             <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
             <div><span>Keys livrees</span>${(order.assignedKeys || []).join(", ") || "-"}</div>
-            <div><span>Compte livre</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryAccounts || "-") : "apres acceptation"}</div></div>
+            <div><span>Compte livre</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryLogin || order.deliveryAccounts || "-") : "apres acceptation"}</div></div>
+            <div><span>Mot de passe</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryPassword || "-") : "apres acceptation"}</div></div>
             <div><span>Raison refus</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
             <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>
           </div>

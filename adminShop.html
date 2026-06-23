@@ -79,7 +79,7 @@
             <select id="newProductFulfillment" class="account-input">
               <option value="file">Fichier reward</option>
               <option value="key">Key 15 caracteres</option>
-              <option value="account">Compte / identifiants</option>
+              <option value="account">Accounts / identifiants</option>
             </select>
             <label>Type key livre</label>
             <input id="newProductKeyType" class="account-input" type="text" value="MadeIcon" placeholder="ex: MadeIcon">
@@ -318,7 +318,7 @@
             <select class="account-input" data-product-fulfillment="${product.id}">
               <option value="file" ${product.fulfillment !== "key" && product.fulfillment !== "account" ? "selected" : ""}>Fichier reward</option>
               <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>Key 15 caracteres</option>
-              <option value="account" ${product.fulfillment === "account" ? "selected" : ""}>Compte / identifiants</option>
+              <option value="account" ${product.fulfillment === "account" ? "selected" : ""}>Accounts / identifiants</option>
             </select>
             <label>Type key livre</label>
             <input class="account-input" data-product-key-type="${product.id}" type="text" value="${product.keyType || "Key"}" placeholder="ex: MadeIcon">
