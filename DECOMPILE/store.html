@@ -70,6 +70,8 @@
     .proof-help { padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(139, 92, 255, 0.34); background: rgba(139, 92, 255, 0.16); color: #9c76ff; font-size: 0.9rem; font-weight: 800; }
     .proof-field { display: grid; gap: 8px; }
     .proof-field.is-hidden,
+    .paypal-only.is-hidden,
+    .card-only.is-hidden,
     .robux-only.is-hidden { display: none; }
     .proof-field label { color: #9298a8; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
     .proof-field input[type="text"],
@@ -151,6 +153,16 @@
           <input id="orderContactEmail" name="orderContactEmail" type="email" placeholder="email pour recevoir ta commande" autocomplete="email" required>
         </div>
 
+        <div class="proof-field paypal-only is-hidden" id="paypalSenderField">
+          <label for="paypalSenderEmail">Mail PayPal qui a envoye l'argent</label>
+          <input id="paypalSenderEmail" name="paypalSenderEmail" type="email" placeholder="email PayPal utilise pour le paiement">
+        </div>
+
+        <div class="proof-field card-only is-hidden" id="payerIbanField">
+          <label for="payerIban">Ton IBAN</label>
+          <input id="payerIban" name="payerIban" type="text" placeholder="IBAN utilise pour le virement">
+        </div>
+
         <div class="proof-field is-hidden" id="quantityField">
           <label for="purchaseQuantity">Quantite</label>
           <input id="purchaseQuantity" type="number" min="1" value="1">
@@ -187,7 +199,8 @@
   <script src="auth-fallback.js"></script>
   <script>
     const CHECKOUT_CONFIG = {
-      paypalBusinessEmail: "seller@example.com",
+      paypalBusinessEmail: "ethannfavre@gmail.com",
+      cardIban: "FR76 3000 6000 0112 3456 7890 189",
       stripeCheckoutUrl: "https://buy.stripe.com/test_REPLACE_ME",
       robloxUniverseId: "REPLACE_UNIVERSE_ID"
     };
@@ -195,6 +208,9 @@
     const STORE_PRODUCTS_KEY = "lusive-store-products";
     const STORE_ORDERS_KEY = "lusive-store-orders";
     const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1518658953599516803/yJ-e3SmyH1Xli1tfUcXu2ADAx1du0ukXGm8xN63ooW24s8dXw6MksNWLyv-eD_2-mQ-A";
+    const DISCORD_WEBHOOK_50_URL = "https://discord.com/api/webhooks/1518786007330193498/3lthejVM-AyvM_PWOPZSEnlYMbQUlQAETrrUbk1YO5qFDYIHE4GUB3GvmsM1-_N_o0Gd";
+    const DISCORD_WEBHOOK_500_URL = "https://discord.com/api/webhooks/1518785900350406716/jiKZjNFbgF3c8eFbqXNNLdOVblT0R54Qm9fW3borWyEoaUWn3pfzNU91GdaRGl0sGhK0";
+    const DISCORD_HIGH_VALUE_USER_ID = "1065581387358404699";
     const DEFAULT_REWARD_FILE = "rewards/[] Adopt Me! (Decompile).rbxl";
     const PURCHASE_COOLDOWN_KEY = "lusive-last-purchase-at";
     const PURCHASE_COOLDOWN_MS = 2.5 * 60 * 60 * 1000;
@@ -437,8 +453,11 @@
     async function sendOrderToDiscord(order, proof) {
       const formData = new FormData();
       const productNames = (order.products || []).map((product) => product.name).join(", ") || "-";
+      const orderTotal = Number(order.total || 0);
+      const webhookUrl = orderTotal > 500 ? DISCORD_WEBHOOK_500_URL : orderTotal > 50 ? DISCORD_WEBHOOK_50_URL : DISCORD_WEBHOOK_URL;
+      const pingContent = orderTotal > 1000 ? `<@${DISCORD_HIGH_VALUE_USER_ID}> ` : "";
       formData.append("payload_json", JSON.stringify({
-        content: `Nouvelle commande: ${order.id}`,
+        content: `${pingContent}Nouvelle commande: ${order.id}`,
         embeds: [{
           title: "Nouvelle commande boutique",
           color: 0x61f0ff,
@@ -450,6 +469,8 @@
             { name: "Quantite", value: String(order.quantity || 1), inline: true },
             { name: "Email compte", value: order.customerEmail || "-", inline: false },
             { name: "Email commande", value: order.contactEmail || "-", inline: false },
+            { name: "Mail PayPal envoyeur", value: order.paypalSenderEmail || "-", inline: false },
+            { name: "IBAN acheteur", value: order.payerIban || "-", inline: false },
             { name: "Pseudo compte", value: order.customerPseudo || "-", inline: true },
             { name: "Pseudo Roblox", value: order.username || "-", inline: true },
             { name: "Produit", value: productNames, inline: false }
@@ -462,7 +483,7 @@
         formData.append("files[1]", proof.gamepassProofFile, `gamepass-${order.id}-${proof.gamepassProofFile.name}`);
       }
 
-      const response = await fetch(DISCORD_WEBHOOK_URL, {
+      const response = await fetch(webhookUrl, {
         method: "POST",
         body: formData
       });
@@ -480,6 +501,8 @@
         provider,
         customerEmail: getCustomerEmail(),
         contactEmail: proof.contactEmail,
+        paypalSenderEmail: proof.paypalSenderEmail,
+        payerIban: proof.payerIban,
         customerPseudo: getCustomerPseudo(),
         username: proof.username,
         quantity: proof.quantity,
@@ -523,6 +546,8 @@
       document.querySelector(".proof-submit").disabled = false;
       document.querySelector("#proofService").textContent = selectedProduct.name;
       document.querySelector("#orderContactEmail").value = "";
+      document.querySelector("#paypalSenderEmail").value = "";
+      document.querySelector("#payerIban").value = "";
       document.querySelector("#purchaseQuantity").value = 1;
       document.querySelector("#proofAmount").textContent = currentTotalLabel();
       const robuxLink = selectedProduct.robloxLink || defaultProducts[0].robloxLink;
@@ -535,9 +560,17 @@
     function updatePaymentFields() {
       const payment = document.querySelector("input[name='payment']:checked").value;
       const isRoblox = payment === "roblox";
+      const isPaypal = payment === "paypal";
+      const isCard = payment === "card";
       const canMultiple = Boolean(selectedProduct?.allowMultiple) && !isRoblox;
       document.querySelectorAll(".robux-only").forEach((element) => {
         element.classList.toggle("is-hidden", !isRoblox);
+      });
+      document.querySelectorAll(".paypal-only").forEach((element) => {
+        element.classList.toggle("is-hidden", !isPaypal);
+      });
+      document.querySelectorAll(".card-only").forEach((element) => {
+        element.classList.toggle("is-hidden", !isCard);
       });
       document.querySelector("#quantityField").classList.toggle("is-hidden", !canMultiple);
       document.querySelector("#purchaseQuantity").max = canMultiple ? Math.max(1, getStockCount(selectedProduct)) : 1;
@@ -545,9 +578,15 @@
       document.querySelector("#proofAmount").textContent = currentTotalLabel();
       document.querySelector("#robloxUsername").required = isRoblox;
       document.querySelector("#gamepassProof").required = isRoblox;
-      document.querySelector("#proofHelp").textContent = isRoblox
-        ? "Tu dois fournir une preuve de transaction et une capture montrant que tu possedes le gamepass."
-        : "Tu dois fournir uniquement une preuve de transaction pour ce moyen de paiement.";
+      document.querySelector("#paypalSenderEmail").required = isPaypal;
+      document.querySelector("#payerIban").required = isCard;
+      if (isRoblox) {
+        document.querySelector("#proofHelp").textContent = "Tu dois fournir une preuve de transaction et une capture montrant que tu possedes le gamepass.";
+      } else if (payment === "paypal") {
+        document.querySelector("#proofHelp").textContent = `Tu dois envoyer ${money.format(total())} a ${CHECKOUT_CONFIG.paypalBusinessEmail}, puis ajouter la capture de transaction.`;
+      } else {
+        document.querySelector("#proofHelp").textContent = `Tu dois envoyer ${money.format(total())} a cette IBAN : ${CHECKOUT_CONFIG.cardIban}, puis ajouter la capture de transaction.`;
+      }
       if (isRoblox) {
         document.querySelector("#robloxUsername").focus();
       }
@@ -569,6 +608,8 @@
       const username = document.querySelector("#robloxUsername").value.trim();
       const contactEmail = normalizeEmail(document.querySelector("#orderContactEmail").value);
       const payment = document.querySelector("input[name='payment']:checked").value;
+      const paypalSenderEmail = normalizeEmail(document.querySelector("#paypalSenderEmail").value);
+      const payerIban = document.querySelector("#payerIban").value.trim().replace(/\s+/g, " ");
       const transactionProof = document.querySelector("#transactionProof").files[0];
       const gamepassProof = document.querySelector("#gamepassProof").files[0];
       const isRoblox = payment === "roblox";
@@ -577,6 +618,16 @@
 
       if (!isValidEmail(contactEmail)) {
         document.querySelector("#proofHelp").textContent = "Entre un mail de commande valide.";
+        return;
+      }
+
+      if (payment === "paypal" && !isValidEmail(paypalSenderEmail)) {
+        document.querySelector("#proofHelp").textContent = "Entre le mail PayPal qui a envoye l'argent.";
+        return;
+      }
+
+      if (payment === "card" && payerIban.length < 12) {
+        document.querySelector("#proofHelp").textContent = "Entre l'IBAN utilise pour le virement.";
         return;
       }
 
@@ -596,6 +647,8 @@
       await completeOrder(selectedPaymentProvider, {
         username: isRoblox ? username : "",
         contactEmail,
+        paypalSenderEmail: payment === "paypal" ? paypalSenderEmail : "",
+        payerIban: payment === "card" ? payerIban : "",
         quantity,
         payment,
         transactionProofName: transactionProof.name,
@@ -612,7 +665,7 @@
     document.querySelectorAll("input[name='payment']").forEach((input) => input.addEventListener("change", updatePaymentFields));
     document.querySelector("#purchaseQuantity").addEventListener("input", () => {
       if (selectedProduct) {
-        document.querySelector("#proofAmount").textContent = currentTotalLabel();
+        updatePaymentFields();
       }
     });
     document.querySelector("#transactionProof").addEventListener("change", () => updateProofFileName("#transactionProof", "#transactionProofName"));
