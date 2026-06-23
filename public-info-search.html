@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Recherche Adresses</title>
+  <title>Address Search</title>
   <style>
     :root { --bg: #f0fdf4; --panel: #fff; --ink: #052e16; --muted: #4b6358; --line: #bbf7d0; --green: #047857; --green-dark: #065f46; }
     * { box-sizing: border-box; }
@@ -33,7 +33,7 @@
 </head>
 <body>
   <header>
-    <div class="brand">Recherche Adresses</div>
+    <div class="brand">Address Search</div>
     <nav>
       <a href="app.html">Back</a>
       <a href="database.html">Data Base</a>
@@ -42,10 +42,10 @@
   <main>
     <section class="gmail-auth" data-gmail-auth></section>
     <section class="panel">
-      <h1>Adresses</h1>
+      <h1>Addresses</h1>
       <form id="addressSearch">
         <input id="addressQuery" placeholder="Ex: 10 rue de Rivoli Paris" autocomplete="off">
-        <button>Rechercher</button>
+        <button>Search</button>
       </form>
       <div id="addressResults" class="results"></div>
     </section>
@@ -61,39 +61,39 @@
       event.preventDefault();
       const query = addressQuery.value.trim();
       if (!query) return;
-      addressResults.innerHTML = `<article class="card"><h2>Recherche...</h2><p class="muted">Consultation de l'API publique adresse.data.gouv.fr.</p></article>`;
+      addressResults.innerHTML = `<article class="card"><h2>Searching...</h2><p class="muted">Checking the public address.data.gouv.fr API.</p></article>`;
       try {
         const response = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=8`);
-        if (!response.ok) throw new Error("API indisponible");
+        if (!response.ok) throw new Error("API unavailable");
         const payload = await response.json();
         renderAddresses(payload.features || []);
       } catch (error) {
-        addressResults.innerHTML = `<article class="card"><h2>Erreur</h2><p class="muted">Impossible de charger les adresses pour le moment.</p></article>`;
+        addressResults.innerHTML = `<article class="card"><h2>Error</h2><p class="muted">Unable to load addresses right now.</p></article>`;
       }
     });
 
     function renderAddresses(features) {
       if (!features.length) {
-        addressResults.innerHTML = `<article class="card"><h2>Aucun resultat</h2><p class="muted">Essaie une adresse plus precise.</p></article>`;
+        addressResults.innerHTML = `<article class="card"><h2>No results</h2><p class="muted">Try a more precise address.</p></article>`;
         return;
       }
       addressResults.innerHTML = features.map(feature => {
         const p = feature.properties;
         const [lon, lat] = feature.geometry.coordinates;
-        const label = p.label || "Adresse inconnue";
+        const label = p.label || "Unknown address";
         const maps = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
         const cadastre = `https://cadastre.data.gouv.fr/map?search=${encodeURIComponent(label)}`;
         const sirene = `https://annuaire-entreprises.data.gouv.fr/rechercher?terme=${encodeURIComponent(label)}`;
         return `
           <article class="card">
             <h2>${label}</h2>
-            <div class="muted">Commune : ${p.city || "inconnue"} - Code postal : ${p.postcode || "inconnu"}</div>
+            <div class="muted">City: ${p.city || "unknown"} - Postal code: ${p.postcode || "unknown"}</div>
             <div>GPS : ${lat.toFixed(6)}, ${lon.toFixed(6)}</div>
             <div>Score : ${Math.round((p.score || 0) * 100)}%</div>
             <div class="links">
-              <a href="${maps}" target="_blank" rel="noopener">Carte</a>
-              <a href="${cadastre}" target="_blank" rel="noopener">Cadastre public</a>
-              <a href="${sirene}" target="_blank" rel="noopener">Entreprises a cette adresse</a>
+              <a href="${maps}" target="_blank" rel="noopener">Map</a>
+              <a href="${cadastre}" target="_blank" rel="noopener">Public cadastre</a>
+              <a href="${sirene}" target="_blank" rel="noopener">Companies at this address</a>
             </div>
           </article>
         `;

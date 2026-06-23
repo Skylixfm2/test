@@ -42,17 +42,17 @@
 
     <section class="admin-orders-head">
       <div>
-        <p class="eyebrow">Validation des commandes</p>
+        <p class="eyebrow">Order validation</p>
         <h1>Admin Orders</h1>
       </div>
-      <span id="accessBadge" class="history-pill">verification</span>
+      <span id="accessBadge" class="history-pill">checking</span>
     </section>
 
-    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis. Connecte-toi avec le Gmail admin.</section>
+    <section id="accessDenied" class="panel access-denied" hidden>Admin access required. Sign in with the admin Gmail.</section>
 
     <section id="adminOrdersPanel" hidden>
       <div class="admin-order-search">
-        <input id="adminOrderSearchInput" class="account-input" type="search" placeholder="Chercher avec un Commande ID">
+        <input id="adminOrderSearchInput" class="account-input" type="search" placeholder="Search by Order ID">
         <button id="adminOrderSearchReset" class="ghost-button" type="button">Reset</button>
       </div>
       <section id="ordersBoard" class="orders-board"></section>
@@ -178,7 +178,7 @@
       const keys = getKeys();
       const available = keys.filter((entry) => entry.status === "available" && keyEntryType(entry) === expectedType).slice(0, quantity);
       if (available.length < quantity) {
-        alert(`Pas assez de keys ${expectedType} disponibles. Keys trouvees: ${available.length}/${quantity}.`);
+        alert(`Not enough ${expectedType} keys available. Keys found: ${available.length}/${quantity}.`);
         return null;
       }
 
@@ -234,20 +234,20 @@
       if (!currentOrder) return;
 
       if (status === "accepted" && isAccountOrder(currentOrder)) {
-        deliveryLogin = prompt("Mail / pseudo du compte a livrer :", currentOrder.deliveryLogin || "");
+        deliveryLogin = prompt("Account email / username to deliver:", currentOrder.deliveryLogin || "");
         if (deliveryLogin === null || !deliveryLogin.trim()) {
-          alert("Mets le mail/pseudo du compte avant d'accepter.");
+          alert("Enter the account email/username before accepting.");
           return;
         }
-        deliveryPassword = prompt("Mot de passe du compte a livrer :", currentOrder.deliveryPassword || "");
+        deliveryPassword = prompt("Account password to deliver:", currentOrder.deliveryPassword || "");
         if (deliveryPassword === null || !deliveryPassword.trim()) {
-          alert("Mets le mot de passe avant d'accepter.");
+          alert("Enter the password before accepting.");
           return;
         }
       }
 
       if (status === "rejected") {
-        rejectReason = prompt("Raison du refus / probleme a envoyer au Discord :", currentOrder.rejectReason || "");
+        rejectReason = prompt("Rejection reason / issue to send to Discord:", currentOrder.rejectReason || "");
         if (rejectReason === null) return;
       }
 
@@ -264,7 +264,7 @@
           deliveryLogin: deliveryLogin.trim() || nextOrder.deliveryLogin || "",
           deliveryPassword: deliveryPassword.trim() || nextOrder.deliveryPassword || "",
           deliveryAccounts: deliveryLogin.trim()
-            ? `Mail/pseudo: ${deliveryLogin.trim()}\nMot de passe: ${deliveryPassword.trim()}`
+            ? `Email/username: ${deliveryLogin.trim()}\nPassword: ${deliveryPassword.trim()}`
             : nextOrder.deliveryAccounts || "",
           rejectReason: rejectReason.trim() || nextOrder.rejectReason || "",
           reviewedAt: new Date().toISOString()
@@ -280,15 +280,15 @@
       const currentOrder = getOrders().find((order) => order.id === id);
       if (!currentOrder) return;
 
-      const deliveryLogin = prompt("Mail / pseudo du compte a livrer :", currentOrder.deliveryLogin || "");
+      const deliveryLogin = prompt("Account email / username to deliver:", currentOrder.deliveryLogin || "");
       if (deliveryLogin === null || !deliveryLogin.trim()) {
-        alert("Mets le mail/pseudo du compte.");
+        alert("Enter the account email/username.");
         return;
       }
 
-      const deliveryPassword = prompt("Mot de passe du compte a livrer :", currentOrder.deliveryPassword || "");
+      const deliveryPassword = prompt("Account password to deliver:", currentOrder.deliveryPassword || "");
       if (deliveryPassword === null || !deliveryPassword.trim()) {
-        alert("Mets le mot de passe.");
+        alert("Enter the password.");
         return;
       }
 
@@ -300,18 +300,18 @@
           status: "accepted",
           deliveryLogin: deliveryLogin.trim(),
           deliveryPassword: deliveryPassword.trim(),
-          deliveryAccounts: `Mail/pseudo: ${deliveryLogin.trim()}\nMot de passe: ${deliveryPassword.trim()}`,
+          deliveryAccounts: `Email/username: ${deliveryLogin.trim()}\nPassword: ${deliveryPassword.trim()}`,
           reviewedAt: new Date().toISOString()
         };
         return reviewedOrder;
       }));
-      if (reviewedOrder) notifyOrderReview(reviewedOrder, "accepted", "Compte livre / identifiants ajoutes");
+      if (reviewedOrder) notifyOrderReview(reviewedOrder, "accepted", "Account delivered / credentials added");
       renderOrders();
     }
 
     function deleteOrder(id) {
       if (!isAdmin()) return;
-      if (!confirm("Supprimer cette commande ?")) return;
+      if (!confirm("Delete this order?")) return;
       saveOrders(getOrders().map((order) => order.id === id ? { ...order, hiddenFromAdmin: true } : order));
       renderOrders();
     }
@@ -329,7 +329,7 @@
       const board = document.querySelector("#ordersBoard");
 
       if (!orders.length) {
-        board.innerHTML = `<section class="panel empty-orders">${orderSearch ? "Aucune commande avec cet ID." : "Aucune commande."}</section>`;
+        board.innerHTML = `<section class="panel empty-orders">${orderSearch ? "No order with this ID." : "No orders."}</section>`;
         return;
       }
 
@@ -337,39 +337,39 @@
         <article class="order-card">
           <div class="order-top">
             <div>
-              <strong>Commande</strong>
+              <strong>Order</strong>
               <div class="order-id">${order.id}</div>
             </div>
             <span class="status-pill ${statusClass(order.status)}">${order.status || "pending"}</span>
           </div>
           <div class="order-meta">
-            <div><span>Produit</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
+            <div><span>Product</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
             <div><span>Total</span>${order.totalLabel || money.format(Number(order.total || 0))}</div>
-            <div><span>Paiement</span>${order.provider || "-"}</div>
+            <div><span>Payment</span>${order.provider || "-"}</div>
             <div><span>Date</span>${order.createdAt ? new Date(order.createdAt).toLocaleString("fr-FR") : "-"}</div>
           </div>
           <div class="order-meta">
-            <div><span>Pseudo compte</span>${order.customerPseudo || "-"}</div>
-            <div><span>Email compte</span>${order.customerEmail || "-"}</div>
-            <div><span>Email commande</span>${order.contactEmail || "-"}</div>
-            <div><span>Mail PayPal</span>${order.paypalSenderEmail || "-"}</div>
-            <div><span>IBAN acheteur</span>${order.payerIban || "-"}</div>
-            <div><span>Pseudo Roblox</span>${order.username || "-"}</div>
-            <div><span>Preuve transaction</span>${order.transactionProofName || "-"}</div>
+            <div><span>Account username</span>${order.customerPseudo || "-"}</div>
+            <div><span>Account email</span>${order.customerEmail || "-"}</div>
+            <div><span>Order email</span>${order.contactEmail || "-"}</div>
+            <div><span>PayPal email</span>${order.paypalSenderEmail || "-"}</div>
+            <div><span>Buyer IBAN</span>${order.payerIban || "-"}</div>
+            <div><span>Roblox username</span>${order.username || "-"}</div>
+            <div><span>Transaction proof</span>${order.transactionProofName || "-"}</div>
           </div>
           <div class="order-meta">
-            <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
-            <div><span>Keys livrees</span>${(order.assignedKeys || []).join(", ") || "-"}</div>
-            <div><span>Compte livre</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryLogin || order.deliveryAccounts || "-") : "apres acceptation"}</div></div>
-            <div><span>Mot de passe</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryPassword || "-") : "apres acceptation"}</div></div>
-            <div><span>Raison refus</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
-            <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>
+            <div><span>Gamepass proof</span>${order.gamepassProofName || "-"}</div>
+            <div><span>Delivered keys</span>${(order.assignedKeys || []).join(", ") || "-"}</div>
+            <div><span>Delivered account</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryLogin || order.deliveryAccounts || "-") : "after approval"}</div></div>
+            <div><span>Password</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryPassword || "-") : "after approval"}</div></div>
+            <div><span>Rejection reason</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
+            <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "pending"}</div>
           </div>
           <div class="order-actions">
-            <button type="button" onclick="setOrderStatus('${order.id}', 'accepted')">Accepter</button>
-            <button type="button" class="ghost-button" onclick="deliverAccount('${order.id}')">Livrer compte</button>
-            <button type="button" class="ghost-button" onclick="setOrderStatus('${order.id}', 'rejected')">Refuser</button>
-            <button type="button" class="ghost-button" onclick="deleteOrder('${order.id}')">Supprimer</button>
+            <button type="button" onclick="setOrderStatus('${order.id}', 'accepted')">Accept</button>
+            <button type="button" class="ghost-button" onclick="deliverAccount('${order.id}')">Deliver account</button>
+            <button type="button" class="ghost-button" onclick="setOrderStatus('${order.id}', 'rejected')">Reject</button>
+            <button type="button" class="ghost-button" onclick="deleteOrder('${order.id}')">Delete</button>
           </div>
         </article>
       `).join("");
@@ -377,7 +377,7 @@
 
     function renderPage() {
       const allowed = isAdmin();
-      document.querySelector("#accessBadge").textContent = allowed ? "admin actif" : "acces bloque";
+      document.querySelector("#accessBadge").textContent = allowed ? "admin active" : "access blocked";
       document.querySelector("#accessDenied").hidden = allowed;
       document.querySelector("#adminOrdersPanel").hidden = !allowed;
       if (allowed) renderOrders();

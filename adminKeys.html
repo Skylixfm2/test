@@ -48,38 +48,38 @@
         <p class="eyebrow">Generation de keys</p>
         <h1>Admin Keys</h1>
       </div>
-      <span id="accessBadge" class="history-pill">verification</span>
+      <span id="accessBadge" class="history-pill">checking</span>
     </section>
 
-    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis.</section>
+    <section id="accessDenied" class="panel access-denied" hidden>Admin access required.</section>
 
     <section id="keysPanel" class="keys-grid" hidden>
       <section class="panel">
         <div class="share-header">
-          <h2>Generer des keys</h2>
+          <h2>Generate keys</h2>
           <span id="keysCount" class="history-pill">0 keys</span>
         </div>
-        <p class="keys-help">C'est ici que tu mets les keys : choisis un produit de type key, mets le nombre, puis clique sur Generer.</p>
+        <p class="keys-help">This is where you create keys: choose a key product, set the amount, then click Generate.</p>
         <div class="keys-form">
-          <label>Produit
+          <label>Product
             <select id="keyProduct" class="account-input"></select>
           </label>
           <label>Type
             <input id="keyType" class="account-input" type="text" value="MadeIcon" placeholder="ex: MadeIcon">
           </label>
-          <label>Nombre
+          <label>Amount
             <input id="keyAmount" class="account-input" type="number" min="1" max="500" value="10">
           </label>
-          <button type="button" onclick="generateKeys()">Generer</button>
+          <button type="button" onclick="generateKeys()">Generate</button>
         </div>
       </section>
 
       <section class="panel">
         <div class="share-header">
-          <h2>Keys disponibles</h2>
+          <h2>Available keys</h2>
           <div class="admin-shop-actions">
             <button class="ghost-button" type="button" onclick="exportKeys()">Export JSON</button>
-            <button class="ghost-button" type="button" onclick="deleteVisibleKeys()">Tout supprimer</button>
+            <button class="ghost-button" type="button" onclick="deleteVisibleKeys()">Delete all</button>
           </div>
         </div>
         <div class="keys-toolbar">
@@ -187,7 +187,7 @@
       const type = normalizeKeyType(document.querySelector("#keyType").value);
       const amount = Math.min(500, Math.max(1, Number(document.querySelector("#keyAmount").value || 1)));
       if (!productId) {
-        alert("Choisis un produit.");
+        alert("Choose a product.");
         return;
       }
       const keys = getKeys();
@@ -221,7 +221,7 @@
       const keysToDelete = visibleKeys();
       if (!keysToDelete.length) return;
       const label = activeTypeFilter === "all" ? "toutes les keys" : `les keys ${activeTypeFilter}`;
-      if (!confirm(`Supprimer ${label} ?`)) return;
+      if (!confirm(`Delete ${label}?`)) return;
       const ids = new Set(keysToDelete.map((entry) => entry.id));
       const productIds = new Set(keysToDelete.map((entry) => entry.productId).filter(Boolean));
       saveKeys(getKeys().filter((entry) => !ids.has(entry.id)));
@@ -265,7 +265,7 @@
         activeTypeFilter = "all";
       }
       document.querySelector("#keyTypeFilter").innerHTML = `
-        <option value="all" ${activeTypeFilter === "all" ? "selected" : ""}>Tous les types</option>
+        <option value="all" ${activeTypeFilter === "all" ? "selected" : ""}>All types</option>
         ${types.map((type) => `<option value="${type}" ${activeTypeFilter === type ? "selected" : ""}>${type}</option>`).join("")}
       `;
     }
@@ -277,7 +277,7 @@
       document.querySelector("#keysCount").textContent = `${keys.length} key${keys.length === 1 ? "" : "s"}`;
       const board = document.querySelector("#keysBoard");
       if (!keys.length) {
-        board.innerHTML = `<section class="empty-keys">Aucune key generee.</section>`;
+        board.innerHTML = `<section class="empty-keys">No key generated.</section>`;
         return;
       }
       board.innerHTML = keys.map((entry) => `
@@ -286,15 +286,15 @@
             <div class="key-code">${fullKey(entry)}</div>
             <div class="key-meta">${products.get(entry.productId) || entry.productId} | type: ${normalizeKeyType(entry.type || "Key")} | ${entry.status}${entry.orderId ? ` | ${entry.orderId}` : ""}</div>
           </div>
-          <button class="ghost-button" type="button" onclick="copyKey('${fullKey(entry)}')">Copier</button>
-          <button class="ghost-button" type="button" onclick="deleteKey('${entry.id}')">Supprimer</button>
+          <button class="ghost-button" type="button" onclick="copyKey('${fullKey(entry)}')">Copy</button>
+          <button class="ghost-button" type="button" onclick="deleteKey('${entry.id}')">Delete</button>
         </article>
       `).join("");
     }
 
     function renderPage() {
       const allowed = isAdmin();
-      document.querySelector("#accessBadge").textContent = allowed ? "admin actif" : "acces bloque";
+      document.querySelector("#accessBadge").textContent = allowed ? "admin active" : "access blocked";
       document.querySelector("#accessDenied").hidden = allowed;
       document.querySelector("#keysPanel").hidden = !allowed;
       if (!allowed) return;

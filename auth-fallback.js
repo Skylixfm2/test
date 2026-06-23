@@ -16,12 +16,12 @@
       if (container.textContent.trim()) return;
       container.innerHTML = `
         <div class="gmail-auth-copy">
-          <strong>Connexion indisponible</strong>
-          <span>Firebase ne s'est pas charge. Tu peux reset la session locale.</span>
+          <strong>Sign in unavailable</strong>
+          <span>Firebase did not load. You can reset the local session.</span>
         </div>
         <div class="gmail-auth-form">
-          <button class="ghost-button" type="button" data-auth-reset>Deconnexion / reset</button>
-          <div class="gmail-auth-error">Recharge avec Ctrl + F5 apres le reset.</div>
+          <button class="ghost-button" type="button" data-auth-reset>Sign out / reset</button>
+          <div class="gmail-auth-error">Reload with Ctrl + F5 after the reset.</div>
         </div>
       `;
       container.querySelector("[data-auth-reset]").addEventListener("click", resetAuth);

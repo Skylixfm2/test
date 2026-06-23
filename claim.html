@@ -71,16 +71,16 @@
     function reportProblem(orderId) {
       const order = getOrders().find((entry) => entry.id === orderId);
       if (!order) return;
-      const reason = prompt("Explique le probleme pour ouvrir un ticket Discord :");
+      const reason = prompt("Explain the issue to open a Discord ticket:");
       if (reason === null || !reason.trim()) return;
       fetch(CLAIM_PROBLEM_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ order, status: "problem", reason: reason.trim() })
       }).then(() => {
-        document.querySelector("#claimProblemStatus").textContent = "Probleme envoye au Discord.";
+        document.querySelector("#claimProblemStatus").textContent = "Issue sent to Discord.";
       }).catch(() => {
-        document.querySelector("#claimProblemStatus").textContent = "Impossible d'envoyer le probleme.";
+        document.querySelector("#claimProblemStatus").textContent = "Unable to send the issue.";
       });
     }
 
@@ -89,7 +89,7 @@
       if (!order) return;
       const login = order.deliveryLogin || order.deliveryAccounts || "";
       const password = order.deliveryPassword || "";
-      navigator.clipboard.writeText(`Mail/pseudo: ${login}\nMot de passe: ${password}`);
+      navigator.clipboard.writeText(`Email/username: ${login}\nPassword: ${password}`);
     }
 
     function renderClaim() {
@@ -97,17 +97,17 @@
       const content = document.querySelector("#claimContent");
 
       if (!order) {
-        content.innerHTML = `<h1>Reward introuvable</h1><p class="claim-error">Commande inconnue.</p>`;
+        content.innerHTML = `<h1>Reward not found</h1><p class="claim-error">Unknown order.</p>`;
         return;
       }
 
       if (order.status !== "accepted") {
-        content.innerHTML = `<h1>Reward bloque</h1><p class="claim-error">Cette commande n'est pas encore acceptee.</p>`;
+        content.innerHTML = `<h1>Reward locked</h1><p class="claim-error">This order has not been accepted yet.</p>`;
         return;
       }
 
       if (normalizeEmail(order.customerEmail) && normalizeEmail(order.customerEmail) !== getCustomerEmail()) {
-        content.innerHTML = `<h1>Reward bloque</h1><p class="claim-error">Connecte-toi avec le Gmail utilise pour cette commande.</p><div class="claim-actions"><a class="ghost-button" href="orders.html">Retour My Orders</a></div>`;
+        content.innerHTML = `<h1>Reward locked</h1><p class="claim-error">Sign in with the Gmail used for this order.</p><div class="claim-actions"><a class="ghost-button" href="orders.html">Back to My Orders</a></div>`;
         return;
       }
 
@@ -117,24 +117,25 @@
         || Boolean(order.deliveryLogin)
         || Boolean(order.deliveryPassword)
         || String(order.deliveryAccounts || "").toLowerCase().includes("mot de passe")
+        || String(order.deliveryAccounts || "").toLowerCase().includes("email/username")
         || String(order.deliveryAccounts || "").toLowerCase().includes("mail/pseudo");
 
       if (hasAccountDelivery) {
         const login = order.deliveryLogin || order.deliveryAccounts || "";
         const password = order.deliveryPassword || "";
         content.innerHTML = `
-          <p class="eyebrow">Compte disponible</p>
+          <p class="eyebrow">Account available</p>
           <h1>Claim Account</h1>
           <div class="claim-meta">
-            <div><span>Commande ID</span>${escapeHtml(order.id)}</div>
-            <div><span>Produit</span>${escapeHtml(product.name || "-")}</div>
-            <div><span>Mail / pseudo</span><span class="claim-file">${escapeHtml(login || "-")}</span></div>
-            <div><span>Mot de passe</span><span class="claim-file">${escapeHtml(password || "-")}</span></div>
+            <div><span>Order ID</span>${escapeHtml(order.id)}</div>
+            <div><span>Product</span>${escapeHtml(product.name || "-")}</div>
+            <div><span>Email / username</span><span class="claim-file">${escapeHtml(login || "-")}</span></div>
+            <div><span>Password</span><span class="claim-file">${escapeHtml(password || "-")}</span></div>
           </div>
           <div class="claim-actions">
-            <button class="page-link active" type="button" onclick="copyAccountDelivery('${order.id}')">Copier les identifiants</button>
-            <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Probleme / ticket Discord</button>
-            <a class="ghost-button" href="orders.html">Retour My Orders</a>
+            <button class="page-link active" type="button" onclick="copyAccountDelivery('${order.id}')">Copy credentials</button>
+            <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
+            <a class="ghost-button" href="orders.html">Back to My Orders</a>
           </div>
           <div id="claimProblemStatus" class="claim-status"></div>
         `;
@@ -143,18 +144,18 @@
 
       if (product.fulfillment === "key" || product.id === "codes") {
         content.innerHTML = `
-          <p class="eyebrow">Key disponible</p>
+          <p class="eyebrow">Key available</p>
           <h1>Claim Key</h1>
           <div class="claim-meta">
-            <div><span>Commande ID</span>${order.id}</div>
-            <div><span>Produit</span>${product.name || "-"}</div>
+            <div><span>Order ID</span>${order.id}</div>
+            <div><span>Product</span>${product.name || "-"}</div>
             <div><span>Status</span>${order.status}</div>
-            <div><span>Key</span><span class="claim-file">${assignedKeys.join(", ") || "Aucune key attachee"}</span></div>
+            <div><span>Key</span><span class="claim-file">${assignedKeys.join(", ") || "No key attached"}</span></div>
           </div>
           <div class="claim-actions">
-            <button class="page-link active" type="button" onclick="navigator.clipboard.writeText('${assignedKeys.join("\\n")}')">Copier la key</button>
-            <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Probleme / ticket Discord</button>
-            <a class="ghost-button" href="orders.html">Retour My Orders</a>
+            <button class="page-link active" type="button" onclick="navigator.clipboard.writeText('${assignedKeys.join("\\n")}')">Copy key</button>
+            <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
+            <a class="ghost-button" href="orders.html">Back to My Orders</a>
           </div>
           <div id="claimProblemStatus" class="claim-status"></div>
         `;
@@ -164,18 +165,18 @@
       const rewardFile = order.rewardFile || product.rewardFile || DEFAULT_REWARD_FILE;
       const rewardHref = encodeURI(rewardFile);
       content.innerHTML = `
-        <p class="eyebrow">Reward disponible</p>
+        <p class="eyebrow">Reward available</p>
         <h1>Claim Reward</h1>
         <div class="claim-meta">
-          <div><span>Commande ID</span>${order.id}</div>
-          <div><span>Produit</span>${product.name || "-"}</div>
+          <div><span>Order ID</span>${order.id}</div>
+          <div><span>Product</span>${product.name || "-"}</div>
           <div><span>Status</span>${order.status}</div>
-          <div><span>Fichier</span><span class="claim-file">${rewardFile}</span></div>
+          <div><span>File</span><span class="claim-file">${rewardFile}</span></div>
         </div>
         <div class="claim-actions">
-          <a class="page-link active" href="${rewardHref}" download>Telecharger le reward</a>
-          <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Probleme / ticket Discord</button>
-          <a class="ghost-button" href="orders.html">Retour My Orders</a>
+          <a class="page-link active" href="${rewardHref}" download>Download reward</a>
+          <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
+          <a class="ghost-button" href="orders.html">Back to My Orders</a>
         </div>
         <div id="claimProblemStatus" class="claim-status"></div>
       `;

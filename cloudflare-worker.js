@@ -86,7 +86,7 @@ async function handleOrder(request, env) {
   const transactionProof = fileFromDataUrl(files.transactionProof);
   const gamepassProof = fileFromDataUrl(files.gamepassProof);
 
-  const payment = cleanText(order.payment || "Paiement");
+  const payment = cleanText(order.payment || "Payment");
   const ping = total > 1000 ? `<@${HIGH_VALUE_USER_ID}> ` : "";
   const robuxInfo = order.robuxTotal ? `${Number(order.robuxTotal)} R$` : "-";
   const orderProducts = Array.isArray(order.products) ? order.products : order.items;
@@ -95,21 +95,21 @@ async function handleOrder(request, env) {
     : cleanText(order.productName || order.productId);
 
   await sendDiscordMultipart(webhookUrl, {
-    content: `${ping}Nouvelle commande ${cleanText(order.id)}`,
+    content: `${ping}New order ${cleanText(order.id)}`,
     embeds: [{
-      title: "Nouvelle commande boutique",
+      title: "New shop order",
       color: total > 1000 ? 0xff3b66 : total > 500 ? 0xff9f1c : total > 50 ? 0xffd12f : 0x61f0ff,
       fields: [
-        { name: "Commande", value: cleanText(order.id), inline: false },
-        { name: "Produit", value: productLabel || "-", inline: false },
+        { name: "Order", value: cleanText(order.id), inline: false },
+        { name: "Product", value: productLabel || "-", inline: false },
         { name: "Total", value: payment.toLowerCase() === "roblox" ? robuxInfo : `${total.toFixed(2)} EUR`, inline: true },
-        { name: "Paiement", value: payment, inline: true },
-        { name: "Pseudo compte", value: cleanText(order.accountPseudo), inline: true },
-        { name: "Email compte", value: cleanText(order.accountEmail), inline: true },
-        { name: "Email commande", value: cleanText(order.contactEmail), inline: true },
-        { name: "Mail PayPal", value: cleanText(order.paypalSenderEmail), inline: true },
-        { name: "IBAN acheteur", value: cleanText(order.payerIban), inline: false },
-        { name: "Pseudo Roblox", value: cleanText(order.robloxUsername), inline: true }
+        { name: "Payment", value: payment, inline: true },
+        { name: "Account username", value: cleanText(order.accountPseudo), inline: true },
+        { name: "Account email", value: cleanText(order.accountEmail), inline: true },
+        { name: "Order email", value: cleanText(order.contactEmail), inline: true },
+        { name: "PayPal email", value: cleanText(order.paypalSenderEmail), inline: true },
+        { name: "Buyer IBAN", value: cleanText(order.payerIban), inline: false },
+        { name: "Roblox username", value: cleanText(order.robloxUsername), inline: true }
       ],
       timestamp: new Date().toISOString()
     }]
@@ -125,14 +125,14 @@ async function handleAdminShop(request, env) {
 
   if (type === "stock") {
     await sendDiscordJson(env.STOCK_WEBHOOK_URL, {
-      content: `Stock ajoute: ${cleanText(product.name || product.id)}`,
+      content: `Stock added: ${cleanText(product.name || product.id)}`,
       embeds: [{
-        title: "Stock mis a jour",
+        title: "Stock updated",
         color: 0x61f0ff,
         fields: [
-          { name: "Produit", value: cleanText(product.name || product.id), inline: false },
-          { name: "Ancien stock", value: String(body.oldStock ?? 0), inline: true },
-          { name: "Nouveau stock", value: String(body.newStock ?? 0), inline: true },
+          { name: "Product", value: cleanText(product.name || product.id), inline: false },
+          { name: "Old stock", value: String(body.oldStock ?? 0), inline: true },
+          { name: "New stock", value: String(body.newStock ?? 0), inline: true },
           { name: "Difference", value: `+${Number(body.newStock || 0) - Number(body.oldStock || 0)}`, inline: true }
         ],
         timestamp: new Date().toISOString()
@@ -143,16 +143,16 @@ async function handleAdminShop(request, env) {
 
   if (type === "new-product") {
     await sendDiscordJson(env.NEW_PRODUCT_WEBHOOK_URL, {
-      content: `Nouveau produit: ${cleanText(product.name || product.id)}`,
+      content: `New product: ${cleanText(product.name || product.id)}`,
       embeds: [{
-        title: "Nouveau produit boutique",
+        title: "New shop product",
         color: 0x61f0ff,
         fields: [
-          { name: "Produit", value: cleanText(product.name || product.id), inline: false },
-          { name: "Prix", value: `${parseMoney(product.price).toFixed(2)} EUR`, inline: true },
+          { name: "Product", value: cleanText(product.name || product.id), inline: false },
+          { name: "Price", value: `${parseMoney(product.price).toFixed(2)} EUR`, inline: true },
           { name: "Robux", value: `${Number(product.robuxPrice || 0)} R$`, inline: true },
           { name: "Stock", value: cleanText(product.stock), inline: true },
-          { name: "Type", value: product.fulfillment === "key" ? `Key (${cleanText(product.keyType || "Key")})` : product.fulfillment === "account" ? "Compte" : "Fichier", inline: true }
+          { name: "Type", value: product.fulfillment === "key" ? `Key (${cleanText(product.keyType || "Key")})` : product.fulfillment === "account" ? "Account" : "File", inline: true }
         ],
         timestamp: new Date().toISOString()
       }]
@@ -172,20 +172,20 @@ async function handleAdminOrder(request, env) {
     ? order.products.map((item) => `${item.name || item.id} x${item.quantity || 1}`).join(", ")
     : cleanText(order.productName || order.productId);
 
-  const statusLabel = status === "accepted" ? "acceptee" : status === "problem" ? "probleme / ticket" : "refusee";
+  const statusLabel = status === "accepted" ? "accepted" : status === "problem" ? "issue / ticket" : "rejected";
   await sendDiscordJson(env.ORDER_WEBHOOK_URL, {
-    content: `Commande ${statusLabel}: ${cleanText(order.id)}`,
+    content: `Order ${statusLabel}: ${cleanText(order.id)}`,
     embeds: [{
-      title: status === "accepted" ? "Commande acceptee" : status === "problem" ? "Ticket / probleme client" : "Commande refusee",
+      title: status === "accepted" ? "Order accepted" : status === "problem" ? "Customer issue / ticket" : "Order rejected",
       color: status === "accepted" ? 0x4affad : status === "problem" ? 0xffd12f : 0xff5f5f,
       fields: [
-        { name: "Commande", value: cleanText(order.id), inline: false },
-        { name: "Produit", value: productLabel || "-", inline: false },
+        { name: "Order", value: cleanText(order.id), inline: false },
+        { name: "Product", value: productLabel || "-", inline: false },
         { name: "Total", value: `${total.toFixed(2)} EUR`, inline: true },
-        { name: "Paiement", value: cleanText(order.provider), inline: true },
-        { name: "Email compte", value: cleanText(order.customerEmail), inline: true },
-        { name: "Email commande", value: cleanText(order.contactEmail), inline: true },
-        { name: "Raison / note", value: cleanText(body.reason || order.rejectReason || "Aucune note"), inline: false }
+        { name: "Payment", value: cleanText(order.provider), inline: true },
+        { name: "Account email", value: cleanText(order.customerEmail), inline: true },
+        { name: "Order email", value: cleanText(order.contactEmail), inline: true },
+        { name: "Reason / note", value: cleanText(body.reason || order.rejectReason || "No note"), inline: false }
       ],
       timestamp: new Date().toISOString()
     }]

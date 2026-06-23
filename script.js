@@ -71,7 +71,7 @@ function buildSummary(content) {
   const lineCount = content.split(/\r?\n/).length;
   const functionCount = (content.match(/\bfunction\b/g) || []).length;
   const localCount = (content.match(/\blocal\b/g) || []).length;
-  return `${lineCount} lignes • ${functionCount} function • ${localCount} local`;
+  return `${lineCount} lines • ${functionCount} functions • ${localCount} locals`;
 }
 
 function setCurrent(index) {
@@ -82,7 +82,7 @@ function setCurrent(index) {
 function renderFileList() {
   if (state.files.length === 0) {
     ui.fileList.className = "file-list empty";
-    ui.fileList.textContent = "Ajoute des scripts pour commencer.";
+    ui.fileList.textContent = "Add scripts to start.";
     return;
   }
 
@@ -105,13 +105,13 @@ function renderEditor() {
   ui.copyOutput.disabled = !hasFile;
   ui.downloadCurrent.disabled = !hasFile;
   ui.downloadAll.disabled = state.files.length === 0;
-  ui.fileCount.textContent = `${state.files.length} fichier${state.files.length > 1 ? "s" : ""}`;
+  ui.fileCount.textContent = `${state.files.length} file${state.files.length > 1 ? "s" : ""}`;
 
   if (!hasFile) {
-    ui.currentName.textContent = "Aucun fichier ouvert";
-    ui.currentMeta.textContent = "Importe un ou plusieurs scripts Luau.";
-    ui.sourceView.textContent = "En attente d'un fichier...";
-    ui.outputView.textContent = "Le résultat apparaîtra ici.";
+    ui.currentName.textContent = "No file open";
+    ui.currentMeta.textContent = "Import one or more Luau scripts.";
+    ui.sourceView.textContent = "Waiting for a file...";
+    ui.outputView.textContent = "The result will appear here.";
     return;
   }
 

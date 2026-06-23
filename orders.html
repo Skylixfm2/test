@@ -47,7 +47,7 @@
 
     <section class="orders-head">
       <div>
-        <p class="eyebrow">Commandes boutique</p>
+        <p class="eyebrow">Shop orders</p>
         <h1>My Orders</h1>
       </div>
       <span id="ordersBadge" class="history-pill">0 orders</span>
@@ -122,12 +122,12 @@
       const grid = document.querySelector("#ordersGrid");
 
       if (!email) {
-        grid.innerHTML = `<section class="panel empty-orders">Connecte-toi avec ton Gmail pour voir tes commandes.</section>`;
+        grid.innerHTML = `<section class="panel empty-orders">Sign in with Gmail to view your orders.</section>`;
         return;
       }
 
       if (!orders.length) {
-        grid.innerHTML = `<section class="panel empty-orders">Aucune commande pour ${email}.</section>`;
+        grid.innerHTML = `<section class="panel empty-orders">No orders for ${email}.</section>`;
         return;
       }
 
@@ -135,30 +135,30 @@
         <article class="panel order-card">
           <div class="order-top">
             <div>
-              <strong>Commande</strong>
+              <strong>Order</strong>
               <div class="order-id-text">${order.id}</div>
             </div>
             <span class="status-pill ${statusClass(order.status)}">${order.status || "pending"}</span>
           </div>
           <div class="order-meta">
-            <div><span>Pseudo compte</span>${order.customerPseudo || "-"}</div>
-            <div><span>Email compte</span>${order.customerEmail || "-"}</div>
-            <div><span>Email commande</span>${order.contactEmail || "-"}</div>
+            <div><span>Account username</span>${order.customerPseudo || "-"}</div>
+            <div><span>Account email</span>${order.customerEmail || "-"}</div>
+            <div><span>Order email</span>${order.contactEmail || "-"}</div>
             <div><span>Mail PayPal</span>${order.paypalSenderEmail || "-"}</div>
             <div><span>IBAN</span>${order.payerIban || "-"}</div>
             <div><span>Total</span>${order.totalLabel || money.format(Number(order.total || 0))}</div>
-            <div><span>Paiement</span>${order.provider || "-"}</div>
+            <div><span>Payment</span>${order.provider || "-"}</div>
           </div>
           <div class="order-meta">
             <div><span>Date</span>${order.createdAt ? new Date(order.createdAt).toLocaleString("fr-FR") : "-"}</div>
-            <div><span>Pseudo Roblox</span>${order.username || "-"}</div>
-            <div><span>Produits</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
-            <div><span>Keys</span>${order.status === "accepted" ? (order.assignedKeys || []).join(", ") || "-" : "apres acceptation"}</div>
-            <div><span>Compte</span><div class="delivery-note">${order.status === "accepted" ? "Disponible via Claim" : "apres acceptation"}</div></div>
-            <div><span>Raison refus</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
-            <div><span>Preuve transaction</span>${order.transactionProofName || "-"}</div>
-            <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
-            <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>
+            <div><span>Roblox username</span>${order.username || "-"}</div>
+            <div><span>Products</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
+            <div><span>Keys</span>${order.status === "accepted" ? (order.assignedKeys || []).join(", ") || "-" : "after approval"}</div>
+            <div><span>Account</span><div class="delivery-note">${order.status === "accepted" ? "Available via Claim" : "after approval"}</div></div>
+            <div><span>Rejection reason</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
+            <div><span>Transaction proof</span>${order.transactionProofName || "-"}</div>
+            <div><span>Gamepass proof</span>${order.gamepassProofName || "-"}</div>
+            <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "pending"}</div>
           </div>
           ${order.status === "accepted" ? `
             <div class="order-actions">

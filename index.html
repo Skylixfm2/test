@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,14 +24,14 @@
 
     <section class="panel controls">
       <label class="upload-card" for="fileInput">
-        <span class="upload-title">Choisir des scripts</span>
-        <span class="upload-copy">Sélection multiple acceptée. Rien n'est envoyé en ligne.</span>
+        <span class="upload-title">Choose scripts</span>
+        <span class="upload-copy">Multiple selection supported. Nothing is sent online.</span>
       </label>
       <input id="fileInput" type="file" accept=".lua,.luau,.txt" multiple hidden>
 
       <div class="actions">
-        <button id="downloadCurrent" disabled>Télécharger le script ouvert</button>
-        <button id="downloadAll" disabled>Télécharger tout en JSON</button>
+        <button id="downloadCurrent" disabled>Download open script</button>
+        <button id="downloadAll" disabled>Download all as JSON</button>
       </div>
     </section>
 
@@ -39,28 +39,28 @@
       <aside class="panel sidebar">
         <div class="sidebar-header">
           <h2>Scripts</h2>
-          <span id="fileCount">0 fichier</span>
+          <span id="fileCount">0 files</span>
         </div>
         <div id="fileList" class="file-list empty">
-          Ajoute des scripts pour commencer.
+          Add scripts to start.
         </div>
       </aside>
 
       <section class="panel editor-panel">
         <div class="editor-header">
           <div>
-            <h2 id="currentName">Aucun fichier ouvert</h2>
+            <h2 id="currentName">No file open</h2>
           </div>
-          <button id="copyOutput" disabled>Copier le résultat</button>
+          <button id="copyOutput" disabled>Copy output</button>
         </div>
         <div class="editor-grid">
           <div>
             <h3>Source</h3>
-            <pre id="sourceView" class="code-block muted">En attente d'un fichier...</pre>
+            <pre id="sourceView" class="code-block muted">Waiting for a file...</pre>
           </div>
           <div>
-            <h3>Résultat reconstruit</h3>
-            <pre id="outputView" class="code-block muted">Le résultat apparaîtra ici.</pre>
+            <h3>Reconstructed result</h3>
+            <pre id="outputView" class="code-block muted">The result will appear here.</pre>
           </div>
         </div>
       </section>

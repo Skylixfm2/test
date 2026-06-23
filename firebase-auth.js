@@ -107,11 +107,11 @@ function renderGmailAuth() {
       const displayName = pseudo || email.split("@")[0];
       container.classList.add("is-connected");
       container.innerHTML = `
-        <div class="gmail-account-chip" aria-label="Compte connecte">
+        <div class="gmail-account-chip" aria-label="Connected account">
           <strong>${displayName}</strong>
           <span>${email}</span>
         </div>
-        <button class="ghost-button gmail-auth-logout" type="button">Deconnexion</button>
+        <button class="ghost-button gmail-auth-logout" type="button">Sign out</button>
       `;
 
       container.querySelector(".gmail-auth-logout").addEventListener("click", () => {
@@ -124,13 +124,13 @@ function renderGmailAuth() {
     container.classList.remove("is-connected");
     container.innerHTML = `
       <div class="gmail-auth-copy">
-        <strong>Connexion Firebase</strong>
-        <span>Connexion avec ton compte Google.</span>
+        <strong>Firebase sign in</strong>
+        <span>Sign in with your Google account.</span>
       </div>
       <form class="gmail-auth-form">
-        <input class="gmail-pseudo-input" type="text" value="${pseudo}" placeholder="Pseudo" autocomplete="nickname" maxlength="32">
-        <input class="gmail-email-input" type="email" value="${email}" placeholder="Compte Google" autocomplete="email" disabled>
-        <button class="gmail-send-email" type="button">Connexion Google</button>
+        <input class="gmail-pseudo-input" type="text" value="${pseudo}" placeholder="Username" autocomplete="nickname" maxlength="32">
+        <input class="gmail-email-input" type="email" value="${email}" placeholder="Google account" autocomplete="email" disabled>
+        <button class="gmail-send-email" type="button">Sign in with Google</button>
         <div class="gmail-auth-codes"></div>
         <div class="gmail-auth-error"></div>
       </form>
@@ -146,7 +146,7 @@ function renderGmailAuth() {
       status.textContent = "";
       const nextPseudo = pseudoInput.value.trim();
       if (nextPseudo.length < 2) {
-        error.textContent = "Choisis un pseudo.";
+        error.textContent = "Choose a username.";
         return;
       }
       try {
@@ -155,11 +155,11 @@ function renderGmailAuth() {
           localStorage.setItem(CUSTOMER_EMAIL_KEY, normalizeGmail(result.user.email));
           localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
           localStorage.setItem(FIREBASE_UID_KEY, result.user.uid);
-          status.textContent = "Compte Google connecte.";
+          status.textContent = "Google account connected.";
           renderGmailAuth();
         }
       } catch (err) {
-        error.textContent = `Erreur Firebase Google: ${err.code || err.message}`;
+        error.textContent = `Firebase Google error: ${err.code || err.message}`;
       }
     });
 

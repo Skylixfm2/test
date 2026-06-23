@@ -46,58 +46,58 @@
 
     <section class="admin-shop-head">
       <div>
-        <p class="eyebrow">Validation et produits</p>
+        <p class="eyebrow">Validation and products</p>
         <h1>Admin Shop</h1>
       </div>
-      <span id="accessBadge" class="history-pill">verification</span>
+      <span id="accessBadge" class="history-pill">checking</span>
     </section>
 
-    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis. Connecte-toi avec le Gmail admin.</section>
+    <section id="accessDenied" class="panel access-denied" hidden>Admin access required. Sign in with the admin Gmail.</section>
 
     <section id="adminShopPanel" class="admin-shop-grid" hidden>
       <section class="panel">
         <div class="share-header">
-          <h2>Nouveau produit</h2>
+          <h2>New product</h2>
           <span class="history-pill">shop</span>
         </div>
-        <p class="admin-shop-help">Pour vendre des keys : cree un produit, coche "Produit de type key", puis va dans Admin Keys pour generer les keys.</p>
+        <p class="admin-shop-help">To sell keys: create a product, choose the key type, then go to Admin Keys to generate keys.</p>
         <div class="admin-shop-card">
           <div class="admin-shop-form">
-            <label>Nom</label>
+            <label>Name</label>
             <input id="newProductName" class="account-input" type="text" placeholder="ex: Pack Key">
-            <label>Prix</label>
+            <label>Price</label>
             <input id="newProductPrice" class="account-input" type="number" min="0" step="0.01" value="4.99">
-            <label>Prix Robux</label>
+            <label>Robux price</label>
             <input id="newProductRobuxPrice" class="account-input" type="number" min="0" step="1" value="1000">
             <label>Stock</label>
             <input id="newProductStock" class="account-input" type="text" value="10 in stock">
-            <label>Lien Robux</label>
+            <label>Robux link</label>
             <input id="newProductLink" class="account-input" type="url" value="https://www.roblox.com/fr/game-pass/1862510568/1000">
             <label>Reward file</label>
             <input id="newProductReward" class="account-input" type="text" value="rewards/[] Adopt Me! (Decompile).rbxl">
             <label>Type</label>
             <select id="newProductFulfillment" class="account-input">
-              <option value="file">Fichier reward</option>
+              <option value="file">Reward file</option>
               <option value="key">Key 15 caracteres</option>
               <option value="account">Accounts / identifiants</option>
             </select>
-            <label>Type key livre</label>
+            <label>Delivered key type</label>
             <input id="newProductKeyType" class="account-input" type="text" value="MadeIcon" placeholder="ex: MadeIcon">
           </div>
           <label class="admin-shop-check">
             <input id="newProductMultiple" type="checkbox">
-            Achetable plusieurs fois seulement via PayPal / carte
+            Can be bought multiple times only through PayPal / card
           </label>
           <div class="admin-shop-actions">
-            <button type="button" onclick="addProduct()">Ajouter le produit</button>
-            <a class="ghost-button" href="adminKeys.html">Generer des keys</a>
+            <button type="button" onclick="addProduct()">Add product</button>
+            <a class="ghost-button" href="adminKeys.html">Generate keys</a>
           </div>
         </div>
       </section>
 
       <section class="panel">
         <div class="share-header">
-          <h2>Produits</h2>
+          <h2>Products</h2>
           <span id="productsCount" class="history-pill">0 products</span>
         </div>
         <div id="productsBoard" class="admin-shop-board"></div>
@@ -243,10 +243,10 @@
     }
 
     function createProductId(name) {
-      const base = String(name || "produit").toLowerCase()
+      const base = String(name || "product").toLowerCase()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
-        .slice(0, 28) || "produit";
+        .slice(0, 28) || "product";
       const existing = new Set(getProducts().map((product) => product.id));
       const deleted = getDeletedProductIds();
       let id = base;
@@ -262,7 +262,7 @@
       if (!isAdmin()) return;
       const name = document.querySelector("#newProductName").value.trim();
       if (name.length < 2) {
-        alert("Mets un nom de produit.");
+        alert("Enter a product name.");
         return;
       }
       const product = {
@@ -285,7 +285,7 @@
 
     function deleteProduct(id) {
       if (!isAdmin()) return;
-      if (!confirm("Supprimer ce produit ?")) return;
+      if (!confirm("Delete this product?")) return;
       const deleted = getDeletedProductIds();
       deleted.add(id);
       saveDeletedProductIds(deleted);
@@ -304,33 +304,33 @@
             <span class="history-pill">${product.id}</span>
           </div>
           <div class="admin-shop-form">
-            <label>Prix</label>
+            <label>Price</label>
             <input class="account-input" data-product-price="${product.id}" type="number" min="0" step="0.01" value="${product.price}">
-            <label>Prix Robux</label>
+            <label>Robux price</label>
             <input class="account-input" data-product-robux-price="${product.id}" type="number" min="0" step="1" value="${product.robuxPrice || 0}">
             <label>Stock</label>
             <input class="account-input" data-product-stock="${product.id}" type="text" value="${product.stock || ""}">
-            <label>Lien Robux</label>
+            <label>Robux link</label>
             <input class="account-input" data-product-link="${product.id}" type="url" value="${product.robloxLink || defaultRobloxLink}">
             <label>Reward file</label>
             <input class="account-input" data-product-reward="${product.id}" type="text" value="${product.rewardFile || defaultRewardFile}" placeholder="ex: rewards/item.rblx">
             <label>Type</label>
             <select class="account-input" data-product-fulfillment="${product.id}">
-              <option value="file" ${product.fulfillment !== "key" && product.fulfillment !== "account" ? "selected" : ""}>Fichier reward</option>
+              <option value="file" ${product.fulfillment !== "key" && product.fulfillment !== "account" ? "selected" : ""}>Reward file</option>
               <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>Key 15 caracteres</option>
               <option value="account" ${product.fulfillment === "account" ? "selected" : ""}>Accounts / identifiants</option>
             </select>
-            <label>Type key livre</label>
+            <label>Delivered key type</label>
             <input class="account-input" data-product-key-type="${product.id}" type="text" value="${product.keyType || "Key"}" placeholder="ex: MadeIcon">
           </div>
           <label class="admin-shop-check">
             <input data-product-multiple="${product.id}" type="checkbox" ${product.allowMultiple ? "checked" : ""}>
-            Achetable plusieurs fois seulement via PayPal / carte
+            Can be bought multiple times only through PayPal / card
           </label>
           <div class="admin-shop-actions">
-            <button type="button" onclick="saveProduct('${product.id}')">Sauvegarder</button>
-            <button class="ghost-button" type="button" onclick="deleteProduct('${product.id}')">Supprimer</button>
-            ${product.fulfillment === "key" ? `<a class="ghost-button" href="adminKeys.html?product=${encodeURIComponent(product.id)}&type=${encodeURIComponent(product.keyType || "Key")}">Gerer les keys</a>` : ""}
+            <button type="button" onclick="saveProduct('${product.id}')">Save</button>
+            <button class="ghost-button" type="button" onclick="deleteProduct('${product.id}')">Delete</button>
+            ${product.fulfillment === "key" ? `<a class="ghost-button" href="adminKeys.html?product=${encodeURIComponent(product.id)}&type=${encodeURIComponent(product.keyType || "Key")}">Manage keys</a>` : ""}
           </div>
         </article>
       `).join("");
@@ -338,7 +338,7 @@
 
     function renderAdminShop() {
       const allowed = isAdmin();
-      document.querySelector("#accessBadge").textContent = allowed ? "admin actif" : "acces bloque";
+      document.querySelector("#accessBadge").textContent = allowed ? "admin active" : "access blocked";
       document.querySelector("#accessDenied").hidden = allowed;
       document.querySelector("#adminShopPanel").hidden = !allowed;
       if (!allowed) return;
