@@ -18,6 +18,7 @@
     .order-meta div { padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.04); color: #dce5ff; }
     .order-meta span { display: block; color: #98a6ba; font-size: 0.78rem; font-weight: 900; text-transform: uppercase; }
     .order-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .delivery-note { white-space: pre-wrap; overflow-wrap: anywhere; }
     .status-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 6px 10px; border-radius: 999px; font-weight: 900; }
     .status-pending { background: rgba(255, 209, 47, 0.16); color: #ffd12f; }
     .status-accepted { background: rgba(74, 255, 173, 0.14); color: #4affa8; }
@@ -67,6 +68,7 @@
     const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const EMAIL_VERIFIED_KEY = "lusive-email-verified";
     const ADMIN_EMAIL = "solarydigix@gmail.com";
+    const ADMIN_ORDER_WEBHOOK_ENDPOINT = "https://skylixfm-shop.solarydigix.workers.dev/admin-order";
     const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
     let orderSearch = "";
 
@@ -86,6 +88,31 @@
 
     function saveOrders(orders) {
       localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function primaryProduct(order) {
+      return (order.products || [])[0] || {};
+    }
+
+    function isAccountOrder(order) {
+      return primaryProduct(order).fulfillment === "account";
+    }
+
+    function notifyOrderReview(order, status, reason = "") {
+      fetch(ADMIN_ORDER_WEBHOOK_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order, status, reason })
+      }).catch(() => {});
     }
 
     function getProducts() {
@@ -199,14 +226,42 @@
 
     function setOrderStatus(id, status) {
       if (!isAdmin()) return;
+      let deliveryAccounts = "";
+      let rejectReason = "";
+
+      const currentOrder = getOrders().find((order) => order.id === id);
+      if (!currentOrder) return;
+
+      if (status === "accepted" && isAccountOrder(currentOrder)) {
+        deliveryAccounts = prompt("Infos du compte a livrer (ex: login, id, note). Ne mets que des comptes autorises a vendre.", currentOrder.deliveryAccounts || "");
+        if (deliveryAccounts === null || !deliveryAccounts.trim()) {
+          alert("Mets les infos du compte avant d'accepter.");
+          return;
+        }
+      }
+
+      if (status === "rejected") {
+        rejectReason = prompt("Raison du refus / probleme a envoyer au Discord :", currentOrder.rejectReason || "");
+        if (rejectReason === null) return;
+      }
+
+      let reviewedOrder = null;
       saveOrders(getOrders().map((order) => {
         if (order.id !== id) return order;
         const statusOrder = status === "rejected" ? restoreOrderStock(order) : order;
         const acceptedOrder = status === "accepted" ? consumeRestoredOrderStock(statusOrder) : statusOrder;
         const nextOrder = status === "accepted" ? assignKeysToOrder(acceptedOrder) : acceptedOrder;
         if (!nextOrder) return order;
-        return { ...nextOrder, status, reviewedAt: new Date().toISOString() };
+        reviewedOrder = {
+          ...nextOrder,
+          status,
+          deliveryAccounts: deliveryAccounts.trim() || nextOrder.deliveryAccounts || "",
+          rejectReason: rejectReason.trim() || nextOrder.rejectReason || "",
+          reviewedAt: new Date().toISOString()
+        };
+        return reviewedOrder;
       }));
+      if (reviewedOrder) notifyOrderReview(reviewedOrder, status, rejectReason);
       renderOrders();
     }
 
@@ -261,6 +316,8 @@
           <div class="order-meta">
             <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
             <div><span>Keys livrees</span>${(order.assignedKeys || []).join(", ") || "-"}</div>
+            <div><span>Compte livre</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryAccounts || "-") : "apres acceptation"}</div></div>
+            <div><span>Raison refus</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
             <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>
           </div>
           <div class="order-actions">

@@ -118,6 +118,7 @@
           <button class="shop-type-button active" type="button" data-shop-filter="all">Tous</button>
           <button class="shop-type-button" type="button" data-shop-filter="key">Keys</button>
           <button class="shop-type-button" type="button" data-shop-filter="file">Fichiers</button>
+          <button class="shop-type-button" type="button" data-shop-filter="account">Comptes</button>
         </div>
       </section>
     </section>
@@ -288,7 +289,7 @@
             robloxLink: product.robloxLink || fallback.robloxLink || defaultProducts[0].robloxLink,
             rewardFile: product.rewardFile || fallback.rewardFile || DEFAULT_REWARD_FILE,
             robuxPrice: Math.max(0, Number(product.robuxPrice ?? fallback.robuxPrice ?? 0)),
-            fulfillment: (product.fulfillment || fallback.fulfillment) === "key" ? "key" : "file",
+            fulfillment: ["key", "account"].includes(product.fulfillment || fallback.fulfillment) ? (product.fulfillment || fallback.fulfillment) : "file",
             allowMultiple: Boolean(product.allowMultiple),
             keyType: product.keyType || fallback.keyType || "Key"
             };

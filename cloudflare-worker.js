@@ -88,9 +88,10 @@ async function handleOrder(request, env) {
 
   const payment = cleanText(order.payment || "Paiement");
   const ping = total > 1000 ? `<@${HIGH_VALUE_USER_ID}> ` : "";
-  const robuxInfo = order.robuxPrice ? `${Number(order.robuxPrice)} R$` : "-";
-  const productLabel = Array.isArray(order.items)
-    ? order.items.map((item) => `${item.name || item.id} x${item.quantity || 1}`).join(", ")
+  const robuxInfo = order.robuxTotal ? `${Number(order.robuxTotal)} R$` : "-";
+  const orderProducts = Array.isArray(order.products) ? order.products : order.items;
+  const productLabel = Array.isArray(orderProducts)
+    ? orderProducts.map((item) => `${item.name || item.id} x${item.quantity || 1}`).join(", ")
     : cleanText(order.productName || order.productId);
 
   await sendDiscordMultipart(webhookUrl, {
@@ -151,7 +152,7 @@ async function handleAdminShop(request, env) {
           { name: "Prix", value: `${parseMoney(product.price).toFixed(2)} EUR`, inline: true },
           { name: "Robux", value: `${Number(product.robuxPrice || 0)} R$`, inline: true },
           { name: "Stock", value: cleanText(product.stock), inline: true },
-          { name: "Type", value: product.fulfillment === "key" ? `Key (${cleanText(product.keyType || "Key")})` : "Fichier", inline: true }
+          { name: "Type", value: product.fulfillment === "key" ? `Key (${cleanText(product.keyType || "Key")})` : product.fulfillment === "account" ? "Compte" : "Fichier", inline: true }
         ],
         timestamp: new Date().toISOString()
       }]
@@ -160,6 +161,36 @@ async function handleAdminShop(request, env) {
   }
 
   return json({ error: "Unknown admin shop event" }, 400);
+}
+
+async function handleAdminOrder(request, env) {
+  const body = await request.json();
+  const order = body.order || {};
+  const status = String(body.status || "");
+  const total = parseMoney(order.total);
+  const productLabel = Array.isArray(order.products)
+    ? order.products.map((item) => `${item.name || item.id} x${item.quantity || 1}`).join(", ")
+    : cleanText(order.productName || order.productId);
+
+  await sendDiscordJson(env.ORDER_WEBHOOK_URL, {
+    content: `Commande ${status === "accepted" ? "acceptee" : "refusee"}: ${cleanText(order.id)}`,
+    embeds: [{
+      title: status === "accepted" ? "Commande acceptee" : "Commande refusee / probleme",
+      color: status === "accepted" ? 0x4affad : 0xff5f5f,
+      fields: [
+        { name: "Commande", value: cleanText(order.id), inline: false },
+        { name: "Produit", value: productLabel || "-", inline: false },
+        { name: "Total", value: `${total.toFixed(2)} EUR`, inline: true },
+        { name: "Paiement", value: cleanText(order.provider), inline: true },
+        { name: "Email compte", value: cleanText(order.customerEmail), inline: true },
+        { name: "Email commande", value: cleanText(order.contactEmail), inline: true },
+        { name: "Raison / note", value: cleanText(body.reason || order.rejectReason || "Aucune note"), inline: false }
+      ],
+      timestamp: new Date().toISOString()
+    }]
+  });
+
+  return json({ ok: true });
 }
 
 export default {
@@ -177,6 +208,7 @@ export default {
     try {
       if (url.pathname === "/order") return await handleOrder(request, env);
       if (url.pathname === "/admin-shop") return await handleAdminShop(request, env);
+      if (url.pathname === "/admin-order") return await handleAdminOrder(request, env);
       return json({ error: "Not found" }, 404);
     } catch (error) {
       return json({ error: cleanText(error.message, "Worker error") }, 500);

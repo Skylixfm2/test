@@ -20,6 +20,7 @@
     .status-accepted { background: rgba(74, 255, 173, 0.14); color: #4affa8; }
     .status-rejected { background: rgba(255, 95, 95, 0.16); color: #ff7777; }
     .order-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .delivery-note { white-space: pre-wrap; overflow-wrap: anywhere; }
     .empty-orders { padding: 22px; color: #98a6ba; }
     .mail-login { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin: 0 0 18px; padding: 16px; border-radius: 12px; background: rgba(9, 17, 39, 0.88); border: 1px solid rgba(0, 178, 255, 0.22); flex-wrap: wrap; }
     .mail-login strong { display: block; color: #ffffff; }
@@ -101,6 +102,15 @@
       localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
     }
 
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     function statusClass(status) {
       return status === "accepted" ? "status-accepted" : status === "rejected" ? "status-rejected" : "status-pending";
     }
@@ -144,6 +154,8 @@
             <div><span>Pseudo Roblox</span>${order.username || "-"}</div>
             <div><span>Produits</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
             <div><span>Keys</span>${order.status === "accepted" ? (order.assignedKeys || []).join(", ") || "-" : "apres acceptation"}</div>
+            <div><span>Compte</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryAccounts || "-") : "apres acceptation"}</div></div>
+            <div><span>Raison refus</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
             <div><span>Preuve transaction</span>${order.transactionProofName || "-"}</div>
             <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
             <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>

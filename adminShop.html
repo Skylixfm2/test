@@ -75,13 +75,15 @@
             <input id="newProductLink" class="account-input" type="url" value="https://www.roblox.com/fr/game-pass/1862510568/1000">
             <label>Reward file</label>
             <input id="newProductReward" class="account-input" type="text" value="rewards/[] Adopt Me! (Decompile).rbxl">
+            <label>Type</label>
+            <select id="newProductFulfillment" class="account-input">
+              <option value="file">Fichier reward</option>
+              <option value="key">Key 15 caracteres</option>
+              <option value="account">Compte / identifiants</option>
+            </select>
             <label>Type key livre</label>
             <input id="newProductKeyType" class="account-input" type="text" value="MadeIcon" placeholder="ex: MadeIcon">
           </div>
-          <label class="admin-shop-check">
-            <input id="newProductIsKey" type="checkbox">
-            Produit de type key
-          </label>
           <label class="admin-shop-check">
             <input id="newProductMultiple" type="checkbox">
             Achetable plusieurs fois seulement via PayPal / carte
@@ -150,7 +152,7 @@
             robloxLink: product.robloxLink || fallback.robloxLink || defaultRobloxLink,
             rewardFile: product.rewardFile || fallback.rewardFile || defaultRewardFile,
             robuxPrice: Math.max(0, Number(product.robuxPrice ?? fallback.robuxPrice ?? 0)),
-            fulfillment: (product.fulfillment || fallback.fulfillment) === "key" ? "key" : "file",
+            fulfillment: ["key", "account"].includes(product.fulfillment || fallback.fulfillment) ? (product.fulfillment || fallback.fulfillment) : "file",
             allowMultiple: Boolean(product.allowMultiple),
             keyType: product.keyType || fallback.keyType || "Key"
             };
@@ -225,7 +227,7 @@
           stock: document.querySelector(`[data-product-stock="${id}"]`).value.trim() || "Out of stock",
           robloxLink: document.querySelector(`[data-product-link="${id}"]`).value.trim() || defaultRobloxLink,
           rewardFile: document.querySelector(`[data-product-reward="${id}"]`).value.trim() || defaultRewardFile,
-          fulfillment: document.querySelector(`[data-product-fulfillment="${id}"]`).value === "key" ? "key" : "file",
+          fulfillment: ["key", "account"].includes(document.querySelector(`[data-product-fulfillment="${id}"]`).value) ? document.querySelector(`[data-product-fulfillment="${id}"]`).value : "file",
           keyType: document.querySelector(`[data-product-key-type="${id}"]`).value.trim() || "Key",
           allowMultiple: document.querySelector(`[data-product-multiple="${id}"]`).checked
         };
@@ -271,7 +273,7 @@
         stock: document.querySelector("#newProductStock").value.trim() || "Out of stock",
         robloxLink: document.querySelector("#newProductLink").value.trim() || defaultRobloxLink,
         rewardFile: document.querySelector("#newProductReward").value.trim() || defaultRewardFile,
-        fulfillment: document.querySelector("#newProductIsKey").checked ? "key" : "file",
+        fulfillment: ["key", "account"].includes(document.querySelector("#newProductFulfillment").value) ? document.querySelector("#newProductFulfillment").value : "file",
         keyType: document.querySelector("#newProductKeyType").value.trim() || "Key",
         allowMultiple: document.querySelector("#newProductMultiple").checked
       };
@@ -314,8 +316,9 @@
             <input class="account-input" data-product-reward="${product.id}" type="text" value="${product.rewardFile || defaultRewardFile}" placeholder="ex: rewards/item.rblx">
             <label>Type</label>
             <select class="account-input" data-product-fulfillment="${product.id}">
-              <option value="file" ${product.fulfillment !== "key" ? "selected" : ""}>Fichier reward</option>
+              <option value="file" ${product.fulfillment !== "key" && product.fulfillment !== "account" ? "selected" : ""}>Fichier reward</option>
               <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>Key 15 caracteres</option>
+              <option value="account" ${product.fulfillment === "account" ? "selected" : ""}>Compte / identifiants</option>
             </select>
             <label>Type key livre</label>
             <input class="account-input" data-product-key-type="${product.id}" type="text" value="${product.keyType || "Key"}" placeholder="ex: MadeIcon">
