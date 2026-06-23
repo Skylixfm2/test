@@ -155,6 +155,7 @@
             <div><span>Products</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
             <div><span>Keys</span>${order.status === "accepted" ? (order.assignedKeys || []).join(", ") || "-" : "after approval"}</div>
             <div><span>Account</span><div class="delivery-note">${order.status === "accepted" ? "Available via Claim" : "after approval"}</div></div>
+            <div><span>Script</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.scriptDelivery || [order.scriptLocation, order.scriptClass].filter(Boolean).join(" / ") || "Available via Claim") : "after approval"}</div></div>
             <div><span>Rejection reason</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
             <div><span>Transaction proof</span>${order.transactionProofName || "-"}</div>
             <div><span>Gamepass proof</span>${order.gamepassProofName || "-"}</div>

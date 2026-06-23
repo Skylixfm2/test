@@ -118,6 +118,7 @@
           <button class="shop-type-button active" type="button" data-shop-filter="all">All</button>
           <button class="shop-type-button" type="button" data-shop-filter="key">Keys</button>
           <button class="shop-type-button" type="button" data-shop-filter="file">Files</button>
+          <button class="shop-type-button" type="button" data-shop-filter="script">Scripts</button>
           <button class="shop-type-button" type="button" data-shop-filter="account">Accounts</button>
         </div>
       </section>
@@ -229,7 +230,7 @@
       { id: "monthly-key", name: "Monthly Key", price: 14.99, robuxPrice: 2500, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
       { id: "lifetime-key", name: "Lifetime Key", price: 29.99, robuxPrice: 5000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
       { id: "bundle-keys", name: "Bundle 5 Keys", price: 11.99, robuxPrice: 1800, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: true, fulfillment: "key" },
-      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "file" },
+      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "script", scriptLocation: "ReplicatedStorage", scriptClass: "ModuleScript" },
       { id: "source-pack", name: "Source Pack", price: 12.99, robuxPrice: 1900, stock: "40 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "file" }
     ];
 
@@ -289,9 +290,11 @@
             robloxLink: product.robloxLink || fallback.robloxLink || defaultProducts[0].robloxLink,
             rewardFile: product.rewardFile || fallback.rewardFile || DEFAULT_REWARD_FILE,
             robuxPrice: Math.max(0, Number(product.robuxPrice ?? fallback.robuxPrice ?? 0)),
-            fulfillment: ["key", "account"].includes(product.fulfillment || fallback.fulfillment) ? (product.fulfillment || fallback.fulfillment) : "file",
+            fulfillment: ["key", "account", "script"].includes(product.fulfillment || fallback.fulfillment) ? (product.fulfillment || fallback.fulfillment) : "file",
             allowMultiple: Boolean(product.allowMultiple),
-            keyType: product.keyType || fallback.keyType || "Key"
+            keyType: product.keyType || fallback.keyType || "Key",
+            scriptLocation: product.scriptLocation || fallback.scriptLocation || "ReplicatedStorage",
+            scriptClass: product.scriptClass || fallback.scriptClass || "ModuleScript"
             };
           });
           const existingIds = new Set(normalized.map((product) => product.id));
@@ -508,7 +511,7 @@
         totalLabel: proof.payment === "roblox" ? formatRobux(robuxTotal()) : money.format(total()),
         currency: proof.payment === "roblox" ? "R$" : "EUR",
         robuxTotal: proof.payment === "roblox" ? robuxTotal() : 0,
-        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE, fulfillment: selectedProduct.fulfillment || "file", keyType: selectedProduct.keyType || "Key" }] : [],
+        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE, fulfillment: selectedProduct.fulfillment || "file", keyType: selectedProduct.keyType || "Key", scriptLocation: selectedProduct.scriptLocation || "ReplicatedStorage", scriptClass: selectedProduct.scriptClass || "ModuleScript" }] : [],
         rewardFile: selectedProduct?.rewardFile || DEFAULT_REWARD_FILE,
         transactionProofName: proof.transactionProofName,
         gamepassProofName: proof.gamepassProofName,

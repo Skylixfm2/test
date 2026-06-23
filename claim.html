@@ -92,6 +92,15 @@
       navigator.clipboard.writeText(`Email/username: ${login}\nPassword: ${password}`);
     }
 
+    function copyScriptDelivery(orderId) {
+      const order = getOrders().find((entry) => entry.id === orderId);
+      if (!order) return;
+      const product = (order.products || [])[0] || {};
+      const location = order.scriptLocation || product.scriptLocation || "ReplicatedStorage";
+      const scriptClass = order.scriptClass || product.scriptClass || "ModuleScript";
+      navigator.clipboard.writeText(`Location: ${location}\nScript class: ${scriptClass}`);
+    }
+
     function renderClaim() {
       const order = getOrders().find((entry) => entry.id === orderId);
       const content = document.querySelector("#claimContent");
@@ -134,6 +143,28 @@
           </div>
           <div class="claim-actions">
             <button class="page-link active" type="button" onclick="copyAccountDelivery('${order.id}')">Copy credentials</button>
+            <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
+            <a class="ghost-button" href="orders.html">Back to My Orders</a>
+          </div>
+          <div id="claimProblemStatus" class="claim-status"></div>
+        `;
+        return;
+      }
+
+      if (product.fulfillment === "script") {
+        const scriptLocation = order.scriptLocation || product.scriptLocation || "ReplicatedStorage";
+        const scriptClass = order.scriptClass || product.scriptClass || "ModuleScript";
+        content.innerHTML = `
+          <p class="eyebrow">Script available</p>
+          <h1>Claim Script</h1>
+          <div class="claim-meta">
+            <div><span>Order ID</span>${escapeHtml(order.id)}</div>
+            <div><span>Product</span>${escapeHtml(product.name || "-")}</div>
+            <div><span>Put it in</span><span class="claim-file">${escapeHtml(scriptLocation)}</span></div>
+            <div><span>Script type</span><span class="claim-file">${escapeHtml(scriptClass)}</span></div>
+          </div>
+          <div class="claim-actions">
+            <button class="page-link active" type="button" onclick="copyScriptDelivery('${order.id}')">Copy script instructions</button>
             <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
             <a class="ghost-button" href="orders.html">Back to My Orders</a>
           </div>

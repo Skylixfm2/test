@@ -60,7 +60,7 @@
           <h2>New product</h2>
           <span class="history-pill">shop</span>
         </div>
-        <p class="admin-shop-help">To sell keys: create a product, choose the key type, then go to Admin Keys to generate keys.</p>
+        <p class="admin-shop-help">Create products as files, keys, accounts, or scripts. Script products are delivered with a Roblox location and script class when you accept the order.</p>
         <div class="admin-shop-card">
           <div class="admin-shop-form">
             <label>Name</label>
@@ -78,11 +78,16 @@
             <label>Type</label>
             <select id="newProductFulfillment" class="account-input">
               <option value="file">Reward file</option>
-              <option value="key">Key 15 caracteres</option>
-              <option value="account">Accounts / identifiants</option>
+              <option value="key">15-character key</option>
+              <option value="account">Accounts / credentials</option>
+              <option value="script">Script delivery</option>
             </select>
             <label>Delivered key type</label>
             <input id="newProductKeyType" class="account-input" type="text" value="MadeIcon" placeholder="ex: MadeIcon">
+            <label>Script location</label>
+            <input id="newProductScriptLocation" class="account-input" type="text" value="ReplicatedStorage" placeholder="ex: ReplicatedStorage">
+            <label>Script class</label>
+            <input id="newProductScriptClass" class="account-input" type="text" value="ModuleScript" placeholder="ex: ModuleScript">
           </div>
           <label class="admin-shop-check">
             <input id="newProductMultiple" type="checkbox">
@@ -129,7 +134,7 @@
       { id: "monthly-key", name: "Monthly Key", price: 14.99, robuxPrice: 2500, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" },
       { id: "lifetime-key", name: "Lifetime Key", price: 29.99, robuxPrice: 5000, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" },
       { id: "bundle-keys", name: "Bundle 5 Keys", price: 11.99, robuxPrice: 1800, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: true, fulfillment: "key" },
-      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "file" },
+      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "script", scriptLocation: "ReplicatedStorage", scriptClass: "ModuleScript" },
       { id: "source-pack", name: "Source Pack", price: 12.99, robuxPrice: 1900, stock: "40 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "file" }
     ];
 
@@ -152,9 +157,11 @@
             robloxLink: product.robloxLink || fallback.robloxLink || defaultRobloxLink,
             rewardFile: product.rewardFile || fallback.rewardFile || defaultRewardFile,
             robuxPrice: Math.max(0, Number(product.robuxPrice ?? fallback.robuxPrice ?? 0)),
-            fulfillment: ["key", "account"].includes(product.fulfillment || fallback.fulfillment) ? (product.fulfillment || fallback.fulfillment) : "file",
+            fulfillment: ["key", "account", "script"].includes(product.fulfillment || fallback.fulfillment) ? (product.fulfillment || fallback.fulfillment) : "file",
             allowMultiple: Boolean(product.allowMultiple),
-            keyType: product.keyType || fallback.keyType || "Key"
+            keyType: product.keyType || fallback.keyType || "Key",
+            scriptLocation: product.scriptLocation || fallback.scriptLocation || "ReplicatedStorage",
+            scriptClass: product.scriptClass || fallback.scriptClass || "ModuleScript"
             };
           });
           const existingIds = new Set(normalized.map((product) => product.id));
@@ -227,8 +234,10 @@
           stock: document.querySelector(`[data-product-stock="${id}"]`).value.trim() || "Out of stock",
           robloxLink: document.querySelector(`[data-product-link="${id}"]`).value.trim() || defaultRobloxLink,
           rewardFile: document.querySelector(`[data-product-reward="${id}"]`).value.trim() || defaultRewardFile,
-          fulfillment: ["key", "account"].includes(document.querySelector(`[data-product-fulfillment="${id}"]`).value) ? document.querySelector(`[data-product-fulfillment="${id}"]`).value : "file",
+          fulfillment: ["key", "account", "script"].includes(document.querySelector(`[data-product-fulfillment="${id}"]`).value) ? document.querySelector(`[data-product-fulfillment="${id}"]`).value : "file",
           keyType: document.querySelector(`[data-product-key-type="${id}"]`).value.trim() || "Key",
+          scriptLocation: document.querySelector(`[data-product-script-location="${id}"]`).value.trim() || "ReplicatedStorage",
+          scriptClass: document.querySelector(`[data-product-script-class="${id}"]`).value.trim() || "ModuleScript",
           allowMultiple: document.querySelector(`[data-product-multiple="${id}"]`).checked
         };
       });
@@ -273,8 +282,10 @@
         stock: document.querySelector("#newProductStock").value.trim() || "Out of stock",
         robloxLink: document.querySelector("#newProductLink").value.trim() || defaultRobloxLink,
         rewardFile: document.querySelector("#newProductReward").value.trim() || defaultRewardFile,
-        fulfillment: ["key", "account"].includes(document.querySelector("#newProductFulfillment").value) ? document.querySelector("#newProductFulfillment").value : "file",
+        fulfillment: ["key", "account", "script"].includes(document.querySelector("#newProductFulfillment").value) ? document.querySelector("#newProductFulfillment").value : "file",
         keyType: document.querySelector("#newProductKeyType").value.trim() || "Key",
+        scriptLocation: document.querySelector("#newProductScriptLocation").value.trim() || "ReplicatedStorage",
+        scriptClass: document.querySelector("#newProductScriptClass").value.trim() || "ModuleScript",
         allowMultiple: document.querySelector("#newProductMultiple").checked
       };
       saveProducts([product, ...getProducts()]);
@@ -316,12 +327,17 @@
             <input class="account-input" data-product-reward="${product.id}" type="text" value="${product.rewardFile || defaultRewardFile}" placeholder="ex: rewards/item.rblx">
             <label>Type</label>
             <select class="account-input" data-product-fulfillment="${product.id}">
-              <option value="file" ${product.fulfillment !== "key" && product.fulfillment !== "account" ? "selected" : ""}>Reward file</option>
-              <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>Key 15 caracteres</option>
-              <option value="account" ${product.fulfillment === "account" ? "selected" : ""}>Accounts / identifiants</option>
+              <option value="file" ${!["key", "account", "script"].includes(product.fulfillment) ? "selected" : ""}>Reward file</option>
+              <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>15-character key</option>
+              <option value="account" ${product.fulfillment === "account" ? "selected" : ""}>Accounts / credentials</option>
+              <option value="script" ${product.fulfillment === "script" ? "selected" : ""}>Script delivery</option>
             </select>
             <label>Delivered key type</label>
             <input class="account-input" data-product-key-type="${product.id}" type="text" value="${product.keyType || "Key"}" placeholder="ex: MadeIcon">
+            <label>Script location</label>
+            <input class="account-input" data-product-script-location="${product.id}" type="text" value="${product.scriptLocation || "ReplicatedStorage"}" placeholder="ex: ReplicatedStorage">
+            <label>Script class</label>
+            <input class="account-input" data-product-script-class="${product.id}" type="text" value="${product.scriptClass || "ModuleScript"}" placeholder="ex: ModuleScript">
           </div>
           <label class="admin-shop-check">
             <input data-product-multiple="${product.id}" type="checkbox" ${product.allowMultiple ? "checked" : ""}>

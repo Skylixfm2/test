@@ -152,7 +152,7 @@ async function handleAdminShop(request, env) {
           { name: "Price", value: `${parseMoney(product.price).toFixed(2)} EUR`, inline: true },
           { name: "Robux", value: `${Number(product.robuxPrice || 0)} R$`, inline: true },
           { name: "Stock", value: cleanText(product.stock), inline: true },
-          { name: "Type", value: product.fulfillment === "key" ? `Key (${cleanText(product.keyType || "Key")})` : product.fulfillment === "account" ? "Account" : "File", inline: true }
+          { name: "Type", value: product.fulfillment === "key" ? `Key (${cleanText(product.keyType || "Key")})` : product.fulfillment === "account" ? "Account" : product.fulfillment === "script" ? `Script (${cleanText(product.scriptLocation || "ReplicatedStorage")} / ${cleanText(product.scriptClass || "ModuleScript")})` : "File", inline: true }
         ],
         timestamp: new Date().toISOString()
       }]
