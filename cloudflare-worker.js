@@ -173,7 +173,8 @@ async function handleAdminOrder(request, env) {
     : cleanText(order.productName || order.productId);
 
   const statusLabel = status === "accepted" ? "accepted" : status === "problem" ? "issue / ticket" : "rejected";
-  await sendDiscordJson(env.ORDER_WEBHOOK_URL, {
+  const webhookUrl = status === "problem" ? (env.ISSUE_WEBHOOK_URL || env.ORDER_WEBHOOK_URL) : env.ORDER_WEBHOOK_URL;
+  await sendDiscordJson(webhookUrl, {
     content: `Order ${statusLabel}: ${cleanText(order.id)}`,
     embeds: [{
       title: status === "accepted" ? "Order accepted" : status === "problem" ? "Customer issue / ticket" : "Order rejected",

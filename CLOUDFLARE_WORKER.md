@@ -32,9 +32,12 @@ ORDER_WEBHOOK_50_URL
 ORDER_WEBHOOK_500_URL
 STOCK_WEBHOOK_URL
 NEW_PRODUCT_WEBHOOK_URL
+ISSUE_WEBHOOK_URL
 ```
 
 Colle les webhooks Discord dans ces secrets.
+
+`ISSUE_WEBHOOK_URL` sert uniquement pour les tickets/problemes envoyes depuis la page Claim.
 
 ## 3. Modifier les URLs dans le site
 
