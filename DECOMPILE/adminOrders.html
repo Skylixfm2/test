@@ -179,12 +179,31 @@
       return { ...order, stockRestoredAt: new Date().toISOString() };
     }
 
+    function consumeRestoredOrderStock(order) {
+      if (!order.stockRestoredAt) return order;
+      const orderProducts = Array.isArray(order.products) ? order.products : [];
+      if (!orderProducts.length) {
+        const { stockRestoredAt, ...nextOrder } = order;
+        return nextOrder;
+      }
+      const products = getProducts();
+      saveProducts(products.map((product) => {
+        const orderProduct = orderProducts.find((entry) => entry.id === product.id);
+        if (!orderProduct) return product;
+        const quantity = Math.max(1, Number(orderProduct.quantity || order.quantity || 1));
+        return { ...product, stock: formatStock(stockCount(product.stock) - quantity) };
+      }));
+      const { stockRestoredAt, ...nextOrder } = order;
+      return nextOrder;
+    }
+
     function setOrderStatus(id, status) {
       if (!isAdmin()) return;
       saveOrders(getOrders().map((order) => {
         if (order.id !== id) return order;
         const statusOrder = status === "rejected" ? restoreOrderStock(order) : order;
-        const nextOrder = status === "accepted" ? assignKeysToOrder(statusOrder) : statusOrder;
+        const acceptedOrder = status === "accepted" ? consumeRestoredOrderStock(statusOrder) : statusOrder;
+        const nextOrder = status === "accepted" ? assignKeysToOrder(acceptedOrder) : acceptedOrder;
         if (!nextOrder) return order;
         return { ...nextOrder, status, reviewedAt: new Date().toISOString() };
       }));
