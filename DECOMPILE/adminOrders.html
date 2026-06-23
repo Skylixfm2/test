@@ -113,6 +113,11 @@
       return rawKey.includes("_") ? rawKey : `${type}_${rawKey}`;
     }
 
+    function keyEntryType(entry) {
+      const rawKey = String(entry.key || "");
+      return rawKey.includes("_") ? normalizeKeyType(rawKey.split("_")[0]) : normalizeKeyType(entry.type || "Key");
+    }
+
     function assignKeysToOrder(order) {
       const product = (order.products || [])[0] || {};
       if (product.fulfillment !== "key" && product.id !== "codes") return order;
@@ -121,9 +126,9 @@
       const quantity = Math.max(1, Number(order.quantity || product.quantity || 1));
       const expectedType = normalizeKeyType(product.keyType || "Key");
       const keys = getKeys();
-      const available = keys.filter((entry) => entry.productId === product.id && entry.status === "available" && normalizeKeyType(entry.type || "Key") === expectedType).slice(0, quantity);
+      const available = keys.filter((entry) => entry.status === "available" && keyEntryType(entry) === expectedType).slice(0, quantity);
       if (available.length < quantity) {
-        alert(`Pas assez de keys ${expectedType} disponibles pour ${product.name || product.id}.`);
+        alert(`Pas assez de keys ${expectedType} disponibles. Keys trouvees: ${available.length}/${quantity}.`);
         return null;
       }
 
@@ -151,7 +156,7 @@
     function deleteOrder(id) {
       if (!isAdmin()) return;
       if (!confirm("Supprimer cette commande ?")) return;
-      saveOrders(getOrders().filter((order) => order.id !== id));
+      saveOrders(getOrders().map((order) => order.id === id ? { ...order, hiddenFromAdmin: true } : order));
       renderOrders();
     }
 
@@ -163,8 +168,8 @@
       if (!isAdmin()) return;
       const allOrders = getOrders();
       const orders = orderSearch
-        ? allOrders.filter((order) => String(order.id || "").toLowerCase().includes(orderSearch.toLowerCase()))
-        : allOrders;
+        ? allOrders.filter((order) => !order.hiddenFromAdmin && String(order.id || "").toLowerCase().includes(orderSearch.toLowerCase()))
+        : allOrders.filter((order) => !order.hiddenFromAdmin);
       const board = document.querySelector("#ordersBoard");
 
       if (!orders.length) {
