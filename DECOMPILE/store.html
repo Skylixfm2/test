@@ -206,6 +206,7 @@
     };
 
     const STORE_PRODUCTS_KEY = "lusive-store-products";
+    const DELETED_PRODUCTS_KEY = "lusive-deleted-products";
     const STORE_ORDERS_KEY = "lusive-store-orders";
     const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1518658953599516803/yJ-e3SmyH1Xli1tfUcXu2ADAx1du0ukXGm8xN63ooW24s8dXw6MksNWLyv-eD_2-mQ-A";
     const DISCORD_WEBHOOK_50_URL = "https://discord.com/api/webhooks/1518786007330193498/3lthejVM-AyvM_PWOPZSEnlYMbQUlQAETrrUbk1YO5qFDYIHE4GUB3GvmsM1-_N_o0Gd";
@@ -280,8 +281,9 @@
       try {
         const saved = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "null");
         if (Array.isArray(saved) && saved.length) {
+          const deletedIds = getDeletedProductIds();
           const defaultsById = new Map(defaultProducts.map((product) => [product.id, product]));
-          const normalized = saved.map((product) => {
+          const normalized = saved.filter((product) => !deletedIds.has(product.id)).map((product) => {
             const fallback = defaultsById.get(product.id) || {};
             return {
             ...fallback,
@@ -290,11 +292,12 @@
             rewardFile: product.rewardFile || fallback.rewardFile || DEFAULT_REWARD_FILE,
             robuxPrice: Math.max(0, Number(product.robuxPrice ?? fallback.robuxPrice ?? 0)),
             fulfillment: (product.fulfillment || fallback.fulfillment) === "key" ? "key" : "file",
-            allowMultiple: Boolean(product.allowMultiple)
+            allowMultiple: Boolean(product.allowMultiple),
+            keyType: product.keyType || fallback.keyType || "Key"
             };
           });
           const existingIds = new Set(normalized.map((product) => product.id));
-          const missingDefaults = defaultProducts.filter((product) => !existingIds.has(product.id));
+          const missingDefaults = defaultProducts.filter((product) => !existingIds.has(product.id) && !deletedIds.has(product.id));
           const merged = [...normalized, ...missingDefaults];
           localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(merged));
           return merged;
@@ -303,6 +306,15 @@
       }
       localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(defaultProducts));
       return defaultProducts;
+    }
+
+    function getDeletedProductIds() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(DELETED_PRODUCTS_KEY) || "[]");
+        return new Set(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        return new Set();
+      }
     }
 
     function renderProducts() {
@@ -510,7 +522,7 @@
         totalLabel: proof.payment === "roblox" ? formatRobux(robuxTotal()) : money.format(total()),
         currency: proof.payment === "roblox" ? "R$" : "EUR",
         robuxTotal: proof.payment === "roblox" ? robuxTotal() : 0,
-        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE, fulfillment: selectedProduct.fulfillment || "file" }] : [],
+        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE, fulfillment: selectedProduct.fulfillment || "file", keyType: selectedProduct.keyType || "Key" }] : [],
         rewardFile: selectedProduct?.rewardFile || DEFAULT_REWARD_FILE,
         transactionProofName: proof.transactionProofName,
         gamepassProofName: proof.gamepassProofName,

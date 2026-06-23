@@ -249,6 +249,8 @@
       document.querySelector("#keyProduct").innerHTML = (keyProducts.length ? keyProducts : products).map((product) => `
         <option value="${product.id}" ${product.id === selected ? "selected" : ""}>${product.name}</option>
       `).join("");
+      const selectedProduct = (keyProducts.length ? keyProducts : products).find((product) => product.id === selected);
+      document.querySelector("#keyType").value = params.get("type") || selectedProduct?.keyType || document.querySelector("#keyType").value || "Key";
     }
 
     function renderTypeFilter() {
@@ -298,6 +300,13 @@
     document.querySelector("#keyTypeFilter").addEventListener("change", (event) => {
       activeTypeFilter = event.target.value || "all";
       renderKeys();
+    });
+
+    document.querySelector("#keyProduct").addEventListener("change", (event) => {
+      const product = getProducts().find((entry) => entry.id === event.target.value);
+      if (product?.keyType) {
+        document.querySelector("#keyType").value = product.keyType;
+      }
     });
 
     renderPage();

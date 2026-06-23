@@ -75,6 +75,8 @@
             <input id="newProductLink" class="account-input" type="url" value="https://www.roblox.com/fr/game-pass/1862510568/1000">
             <label>Reward file</label>
             <input id="newProductReward" class="account-input" type="text" value="rewards/[] Adopt Me! (Decompile).rbxl">
+            <label>Type key livre</label>
+            <input id="newProductKeyType" class="account-input" type="text" value="MadeIcon" placeholder="ex: MadeIcon">
           </div>
           <label class="admin-shop-check">
             <input id="newProductIsKey" type="checkbox">
@@ -105,6 +107,7 @@
   <script src="auth-fallback.js"></script>
   <script>
     const STORE_PRODUCTS_KEY = "lusive-store-products";
+    const DELETED_PRODUCTS_KEY = "lusive-deleted-products";
     const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const EMAIL_VERIFIED_KEY = "lusive-email-verified";
     const ADMIN_EMAIL = "solarydigix@gmail.com";
@@ -136,8 +139,9 @@
       try {
         const parsed = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "null");
         if (Array.isArray(parsed) && parsed.length) {
+          const deletedIds = getDeletedProductIds();
           const defaultsById = new Map(defaultProducts.map((product) => [product.id, product]));
-          const normalized = parsed.map((product) => {
+          const normalized = parsed.filter((product) => !deletedIds.has(product.id)).map((product) => {
             const fallback = defaultsById.get(product.id) || {};
             return {
             ...fallback,
@@ -146,11 +150,12 @@
             rewardFile: product.rewardFile || fallback.rewardFile || defaultRewardFile,
             robuxPrice: Math.max(0, Number(product.robuxPrice ?? fallback.robuxPrice ?? 0)),
             fulfillment: (product.fulfillment || fallback.fulfillment) === "key" ? "key" : "file",
-            allowMultiple: Boolean(product.allowMultiple)
+            allowMultiple: Boolean(product.allowMultiple),
+            keyType: product.keyType || fallback.keyType || "Key"
             };
           });
           const existingIds = new Set(normalized.map((product) => product.id));
-          const missingDefaults = defaultProducts.filter((product) => !existingIds.has(product.id));
+          const missingDefaults = defaultProducts.filter((product) => !existingIds.has(product.id) && !deletedIds.has(product.id));
           const merged = [...normalized, ...missingDefaults];
           localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(merged));
           return merged;
@@ -159,6 +164,19 @@
       }
       localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(defaultProducts));
       return defaultProducts;
+    }
+
+    function getDeletedProductIds() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(DELETED_PRODUCTS_KEY) || "[]");
+        return new Set(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        return new Set();
+      }
+    }
+
+    function saveDeletedProductIds(ids) {
+      localStorage.setItem(DELETED_PRODUCTS_KEY, JSON.stringify([...ids]));
     }
 
     function saveProducts(products) {
@@ -177,6 +195,7 @@
           robloxLink: document.querySelector(`[data-product-link="${id}"]`).value.trim() || defaultRobloxLink,
           rewardFile: document.querySelector(`[data-product-reward="${id}"]`).value.trim() || defaultRewardFile,
           fulfillment: document.querySelector(`[data-product-fulfillment="${id}"]`).value === "key" ? "key" : "file",
+          keyType: document.querySelector(`[data-product-key-type="${id}"]`).value.trim() || "Key",
           allowMultiple: document.querySelector(`[data-product-multiple="${id}"]`).checked
         };
       });
@@ -190,9 +209,10 @@
         .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
         .slice(0, 28) || "produit";
       const existing = new Set(getProducts().map((product) => product.id));
+      const deleted = getDeletedProductIds();
       let id = base;
       let index = 2;
-      while (existing.has(id)) {
+      while (existing.has(id) || deleted.has(id)) {
         id = `${base}-${index}`;
         index += 1;
       }
@@ -215,6 +235,7 @@
         robloxLink: document.querySelector("#newProductLink").value.trim() || defaultRobloxLink,
         rewardFile: document.querySelector("#newProductReward").value.trim() || defaultRewardFile,
         fulfillment: document.querySelector("#newProductIsKey").checked ? "key" : "file",
+        keyType: document.querySelector("#newProductKeyType").value.trim() || "Key",
         allowMultiple: document.querySelector("#newProductMultiple").checked
       };
       saveProducts([product, ...getProducts()]);
@@ -225,6 +246,9 @@
     function deleteProduct(id) {
       if (!isAdmin()) return;
       if (!confirm("Supprimer ce produit ?")) return;
+      const deleted = getDeletedProductIds();
+      deleted.add(id);
+      saveDeletedProductIds(deleted);
       saveProducts(getProducts().filter((product) => product.id !== id));
       renderAdminShop();
     }
@@ -255,6 +279,8 @@
               <option value="file" ${product.fulfillment !== "key" ? "selected" : ""}>Fichier reward</option>
               <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>Key 15 caracteres</option>
             </select>
+            <label>Type key livre</label>
+            <input class="account-input" data-product-key-type="${product.id}" type="text" value="${product.keyType || "Key"}" placeholder="ex: MadeIcon">
           </div>
           <label class="admin-shop-check">
             <input data-product-multiple="${product.id}" type="checkbox" ${product.allowMultiple ? "checked" : ""}>
@@ -263,7 +289,7 @@
           <div class="admin-shop-actions">
             <button type="button" onclick="saveProduct('${product.id}')">Sauvegarder</button>
             <button class="ghost-button" type="button" onclick="deleteProduct('${product.id}')">Supprimer</button>
-            ${product.fulfillment === "key" ? `<a class="ghost-button" href="adminKeys.html?product=${encodeURIComponent(product.id)}">Gerer les keys</a>` : ""}
+            ${product.fulfillment === "key" ? `<a class="ghost-button" href="adminKeys.html?product=${encodeURIComponent(product.id)}&type=${encodeURIComponent(product.keyType || "Key")}">Gerer les keys</a>` : ""}
           </div>
         </article>
       `).join("");

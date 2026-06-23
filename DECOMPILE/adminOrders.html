@@ -119,10 +119,11 @@
       if (Array.isArray(order.assignedKeys) && order.assignedKeys.length) return order;
 
       const quantity = Math.max(1, Number(order.quantity || product.quantity || 1));
+      const expectedType = normalizeKeyType(product.keyType || "Key");
       const keys = getKeys();
-      const available = keys.filter((entry) => entry.productId === product.id && entry.status === "available").slice(0, quantity);
+      const available = keys.filter((entry) => entry.productId === product.id && entry.status === "available" && normalizeKeyType(entry.type || "Key") === expectedType).slice(0, quantity);
       if (available.length < quantity) {
-        alert(`Pas assez de keys disponibles pour ${product.name || product.id}.`);
+        alert(`Pas assez de keys ${expectedType} disponibles pour ${product.name || product.id}.`);
         return null;
       }
 
@@ -144,6 +145,13 @@
         if (!nextOrder) return order;
         return { ...nextOrder, status, reviewedAt: new Date().toISOString() };
       }));
+      renderOrders();
+    }
+
+    function deleteOrder(id) {
+      if (!isAdmin()) return;
+      if (!confirm("Supprimer cette commande ?")) return;
+      saveOrders(getOrders().filter((order) => order.id !== id));
       renderOrders();
     }
 
@@ -196,6 +204,7 @@
           <div class="order-actions">
             <button type="button" onclick="setOrderStatus('${order.id}', 'accepted')">Accepter</button>
             <button type="button" class="ghost-button" onclick="setOrderStatus('${order.id}', 'rejected')">Refuser</button>
+            <button type="button" class="ghost-button" onclick="deleteOrder('${order.id}')">Supprimer</button>
           </div>
         </article>
       `).join("");
