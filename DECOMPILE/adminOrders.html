@@ -63,6 +63,7 @@
   <script>
     const STORE_ORDERS_KEY = "lusive-store-orders";
     const STORE_KEYS_KEY = "lusive-store-keys";
+    const STORE_PRODUCTS_KEY = "lusive-store-products";
     const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const EMAIL_VERIFIED_KEY = "lusive-email-verified";
     const ADMIN_EMAIL = "solarydigix@gmail.com";
@@ -85,6 +86,28 @@
 
     function saveOrders(orders) {
       localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+    }
+
+    function getProducts() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveProducts(products) {
+      localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+    }
+
+    function stockCount(stock) {
+      const match = String(stock || "").match(/\d+/);
+      return match ? Number(match[0]) : 0;
+    }
+
+    function formatStock(count) {
+      return count <= 0 ? "Out of stock" : `${count} in stock`;
     }
 
     function getKeys() {
@@ -142,11 +165,26 @@
       };
     }
 
+    function restoreOrderStock(order) {
+      if (order.stockRestoredAt) return order;
+      const orderProducts = Array.isArray(order.products) ? order.products : [];
+      if (!orderProducts.length) return { ...order, stockRestoredAt: new Date().toISOString() };
+      const products = getProducts();
+      saveProducts(products.map((product) => {
+        const orderProduct = orderProducts.find((entry) => entry.id === product.id);
+        if (!orderProduct) return product;
+        const quantity = Math.max(1, Number(orderProduct.quantity || order.quantity || 1));
+        return { ...product, stock: formatStock(stockCount(product.stock) + quantity) };
+      }));
+      return { ...order, stockRestoredAt: new Date().toISOString() };
+    }
+
     function setOrderStatus(id, status) {
       if (!isAdmin()) return;
       saveOrders(getOrders().map((order) => {
         if (order.id !== id) return order;
-        const nextOrder = status === "accepted" ? assignKeysToOrder(order) : order;
+        const statusOrder = status === "rejected" ? restoreOrderStock(order) : order;
+        const nextOrder = status === "accepted" ? assignKeysToOrder(statusOrder) : statusOrder;
         if (!nextOrder) return order;
         return { ...nextOrder, status, reviewedAt: new Date().toISOString() };
       }));

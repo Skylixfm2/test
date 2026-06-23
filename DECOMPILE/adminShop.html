@@ -111,6 +111,8 @@
     const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const EMAIL_VERIFIED_KEY = "lusive-email-verified";
     const ADMIN_EMAIL = "solarydigix@gmail.com";
+    const STOCK_WEBHOOK_URL = "https://discord.com/api/webhooks/1518797975755948114/YrvgMgDxNXf3kMXSCv5zd0Mx_W-gAmguThaJen42Y0h8_baASjWccvXpQ_XSGSPVC0X2";
+    const NEW_PRODUCT_WEBHOOK_URL = "https://discord.com/api/webhooks/1518798167016079500/YUJGsPeYrvIJGerYkks_w5Tlp0mIg_pRy7gOI4xFaIFF1VwpeNL63HA-w1TTPCSvOYyX";
     const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 
     const defaultRobloxLink = "https://www.roblox.com/fr/game-pass/1862510568/1000";
@@ -183,8 +185,57 @@
       localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
     }
 
+    function stockCount(stock) {
+      const match = String(stock || "").match(/\d+/);
+      return match ? Number(match[0]) : 0;
+    }
+
+    function notifyWebhook(url, payload) {
+      fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    }
+
+    function notifyStockIncrease(product, oldStock, newStock) {
+      notifyWebhook(STOCK_WEBHOOK_URL, {
+        content: `Stock ajoute: ${product.name}`,
+        embeds: [{
+          title: "Stock mis a jour",
+          color: 0x61f0ff,
+          fields: [
+            { name: "Produit", value: product.name || product.id, inline: false },
+            { name: "Ancien stock", value: String(oldStock), inline: true },
+            { name: "Nouveau stock", value: String(newStock), inline: true },
+            { name: "Difference", value: `+${newStock - oldStock}`, inline: true }
+          ],
+          timestamp: new Date().toISOString()
+        }]
+      });
+    }
+
+    function notifyNewProduct(product) {
+      notifyWebhook(NEW_PRODUCT_WEBHOOK_URL, {
+        content: `Nouveau produit: ${product.name}`,
+        embeds: [{
+          title: "Nouveau produit boutique",
+          color: 0x61f0ff,
+          fields: [
+            { name: "Produit", value: product.name || product.id, inline: false },
+            { name: "Prix", value: money.format(Number(product.price || 0)), inline: true },
+            { name: "Robux", value: `${Number(product.robuxPrice || 0)} R$`, inline: true },
+            { name: "Stock", value: product.stock || "-", inline: true },
+            { name: "Type", value: product.fulfillment === "key" ? `Key (${product.keyType || "Key"})` : "Fichier", inline: true }
+          ],
+          timestamp: new Date().toISOString()
+        }]
+      });
+    }
+
     function saveProduct(id) {
       if (!isAdmin()) return;
+      const before = getProducts().find((product) => product.id === id);
       const products = getProducts().map((product) => {
         if (product.id !== id) return product;
         return {
@@ -200,6 +251,12 @@
         };
       });
       saveProducts(products);
+      const after = products.find((product) => product.id === id);
+      const oldStock = stockCount(before?.stock);
+      const newStock = stockCount(after?.stock);
+      if (after && newStock > oldStock) {
+        notifyStockIncrease(after, oldStock, newStock);
+      }
       renderAdminShop();
     }
 
@@ -239,6 +296,7 @@
         allowMultiple: document.querySelector("#newProductMultiple").checked
       };
       saveProducts([product, ...getProducts()]);
+      notifyNewProduct(product);
       document.querySelector("#newProductName").value = "";
       renderAdminShop();
     }
