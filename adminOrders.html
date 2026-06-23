@@ -275,6 +275,40 @@
       renderOrders();
     }
 
+    function deliverAccount(id) {
+      if (!isAdmin()) return;
+      const currentOrder = getOrders().find((order) => order.id === id);
+      if (!currentOrder) return;
+
+      const deliveryLogin = prompt("Mail / pseudo du compte a livrer :", currentOrder.deliveryLogin || "");
+      if (deliveryLogin === null || !deliveryLogin.trim()) {
+        alert("Mets le mail/pseudo du compte.");
+        return;
+      }
+
+      const deliveryPassword = prompt("Mot de passe du compte a livrer :", currentOrder.deliveryPassword || "");
+      if (deliveryPassword === null || !deliveryPassword.trim()) {
+        alert("Mets le mot de passe.");
+        return;
+      }
+
+      let reviewedOrder = null;
+      saveOrders(getOrders().map((order) => {
+        if (order.id !== id) return order;
+        reviewedOrder = {
+          ...order,
+          status: "accepted",
+          deliveryLogin: deliveryLogin.trim(),
+          deliveryPassword: deliveryPassword.trim(),
+          deliveryAccounts: `Mail/pseudo: ${deliveryLogin.trim()}\nMot de passe: ${deliveryPassword.trim()}`,
+          reviewedAt: new Date().toISOString()
+        };
+        return reviewedOrder;
+      }));
+      if (reviewedOrder) notifyOrderReview(reviewedOrder, "accepted", "Compte livre / identifiants ajoutes");
+      renderOrders();
+    }
+
     function deleteOrder(id) {
       if (!isAdmin()) return;
       if (!confirm("Supprimer cette commande ?")) return;
@@ -333,6 +367,7 @@
           </div>
           <div class="order-actions">
             <button type="button" onclick="setOrderStatus('${order.id}', 'accepted')">Accepter</button>
+            <button type="button" class="ghost-button" onclick="deliverAccount('${order.id}')">Livrer compte</button>
             <button type="button" class="ghost-button" onclick="setOrderStatus('${order.id}', 'rejected')">Refuser</button>
             <button type="button" class="ghost-button" onclick="deleteOrder('${order.id}')">Supprimer</button>
           </div>

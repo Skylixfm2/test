@@ -113,7 +113,13 @@
 
       const product = (order.products || [])[0] || {};
       const assignedKeys = Array.isArray(order.assignedKeys) ? order.assignedKeys : [];
-      if (product.fulfillment === "account") {
+      const hasAccountDelivery = product.fulfillment === "account"
+        || Boolean(order.deliveryLogin)
+        || Boolean(order.deliveryPassword)
+        || String(order.deliveryAccounts || "").toLowerCase().includes("mot de passe")
+        || String(order.deliveryAccounts || "").toLowerCase().includes("mail/pseudo");
+
+      if (hasAccountDelivery) {
         const login = order.deliveryLogin || order.deliveryAccounts || "";
         const password = order.deliveryPassword || "";
         content.innerHTML = `
