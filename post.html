@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Post A Script</title>
+  <link rel="stylesheet" href="styles.css?v=font20260606">
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="top-nav">
+      <a class="page-link" href="app.html">Workspace</a>
+      <a class="page-link" href="community.html">Community</a>
+      <a class="page-link active" href="post.html">Post</a>
+      <a class="page-link" href="pet-icon-maker.html">Pet Icons</a>
+      <a class="page-link" href="store.html">Shop</a>
+      <a class="page-link" href="orders.html">My Orders</a>
+      <a id="adminNavLink" class="page-link" href="admin.html" hidden>Admin</a>
+      <button id="toggleTheme" class="page-link page-link-button" type="button">Dark mode</button>
+    </nav>
+
+    <section class="gmail-auth" data-gmail-auth></section>
+
+    <section class="hero">
+      <p class="eyebrow">Local • Post • Share</p>
+      <h1>Create A Post</h1>
+    </section>
+
+    <section class="panel share-page">
+      <div class="share-header">
+        <div>
+          <h3>Post Composer</h3>
+        </div>
+        <div class="share-actions">
+          <label class="ghost-button import-share-button" for="shareImportInput">Import shared post</label>
+          <input id="shareImportInput" type="file" accept=".json" hidden>
+          <button id="shareScript" class="ghost-button">Share</button>
+          <button id="exportShare" class="ghost-button">Export post</button>
+        </div>
+      </div>
+
+      <div class="share-compose">
+        <label class="search-shell">
+          <input id="shareTitleInput" type="text" placeholder="Choose a script name before sharing">
+        </label>
+      </div>
+
+      <label class="share-editor-shell">
+        <span class="share-editor-label">Write or paste code to share</span>
+        <textarea id="shareCodeInput" placeholder="Paste a Luau script here to create a shared post."></textarea>
+      </label>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" aria-live="polite" hidden></div>
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script src="script-post.js"></script>
+</body>
+</html>

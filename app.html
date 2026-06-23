@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luau Script Reconstructor</title>
+  <link rel="stylesheet" href="styles.css?v=font20260606">
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="top-nav">
+      <a class="page-link active" href="app.html">Workspace</a>
+      <a class="page-link" href="community.html">Community</a>
+      <a class="page-link" href="post.html">Post</a>
+      <a class="page-link" href="pet-icon-maker.html">Pet Icons</a>
+      <a class="page-link" href="store.html">Shop</a>
+      <a class="page-link" href="orders.html">My Orders</a>
+      <a class="page-link" href="adminOrders.html">Admin Orders</a>
+      <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link" href="adminKeys.html">Admin Keys</a>
+      <a id="adminNavLink" class="page-link" href="admin.html" hidden>Admin</a>
+      <button id="toggleWritePanel" class="page-link page-link-button" type="button">Write script</button>
+    </nav>
+    <section class="gmail-auth" data-gmail-auth></section>
+    <section class="hero">
+      <p class="eyebrow">Local • Chrome • Luau/Lua</p>
+      <h1>Luau Script Reconstructor</h1>
+    </section>
+
+    <section class="panel controls">
+      <label class="upload-card" for="fileInput">
+        <span class="upload-title">Choose scripts</span>
+      </label>
+      <input id="fileInput" type="file" accept=".lua,.luau,.txt" multiple hidden>
+
+      <div class="actions">
+        <button id="downloadCurrent" disabled>Download current script</button>
+        <button id="downloadZip" disabled>Download ZIP bundle</button>
+        <button id="downloadAll" disabled>Download all as JSON</button>
+        <label class="ghost-button import-share-button" for="shareImportInput">Import shared post</label>
+        <input id="shareImportInput" type="file" accept=".json" hidden>
+      </div>
+    </section>
+
+    <section id="writePanel" class="panel write-panel" hidden>
+      <div class="write-panel-header">
+        <div>
+          <h3>Write A Script</h3>
+        </div>
+        <div class="write-panel-actions">
+          <input id="writeScriptName" class="account-input" type="text" placeholder="Script name">
+          <button id="fixWrittenScript" class="ghost-button" type="button">Repair script</button>
+          <button id="addWrittenScript" type="button">Add to workspace</button>
+        </div>
+      </div>
+      <div class="write-editor">
+        <pre id="writeScriptPreview" class="write-script-preview code-panel" aria-hidden="true"></pre>
+        <textarea id="writeScriptInput" class="write-script-input" spellcheck="false" placeholder="Write or paste your Luau script here..."></textarea>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <aside class="panel sidebar">
+        <div class="sidebar-header">
+          <div>
+            <p class="sidebar-kicker">Session history</p>
+            <h2>Scripts</h2>
+          </div>
+          <div class="sidebar-summary">
+            <span id="fileCount">0 files</span>
+            <button id="clearHistory" class="ghost-button" disabled>Clear</button>
+          </div>
+        </div>
+        <div class="history-tools">
+          <div class="filter-group">
+            <button class="filter-button active" data-filter="latest">Latest</button>
+            <button class="filter-button" data-filter="largest">Largest</button>
+            <button class="filter-button" data-filter="functions">Functions</button>
+          </div>
+        </div>
+        <div id="fileList" class="file-list empty">
+          Add scripts to get started.
+        </div>
+      </aside>
+
+      <section class="panel editor-panel">
+        <div class="editor-header">
+          <div>
+            <h2 id="currentName">No file open</h2>
+          </div>
+          <div class="editor-actions">
+            <label class="search-shell">
+              <input id="searchInput" type="search" placeholder="Search in current script">
+            </label>
+            <button id="toggleTheme" class="ghost-button">Theme</button>
+            <button id="toggleDiff" class="ghost-button" disabled>Hide diff</button>
+            <button id="copyOutput" disabled>Copy output</button>
+          </div>
+        </div>
+        <section class="analysis-panel">
+          <div class="analysis-header">
+            <h3>Analysis</h3>
+            <span id="analysisBadge">Waiting for a file</span>
+          </div>
+          <div class="analysis-grid">
+            <article class="analysis-card">
+              <span class="analysis-label">Functions</span>
+              <strong id="functionCount">0</strong>
+            </article>
+            <article class="analysis-card">
+              <span class="analysis-label">Tables</span>
+              <strong id="tableCount">0</strong>
+            </article>
+            <article class="analysis-card">
+              <span class="analysis-label">Locals</span>
+              <strong id="localCount">0</strong>
+            </article>
+            <article class="analysis-card">
+              <span class="analysis-label">Comments</span>
+              <strong id="commentCount">0</strong>
+            </article>
+            <article class="analysis-card">
+              <span class="analysis-label">Services</span>
+              <strong id="serviceCount">0</strong>
+            </article>
+            <article class="analysis-card">
+              <span class="analysis-label">Requires</span>
+              <strong id="requireCount">0</strong>
+            </article>
+          </div>
+          <div class="analysis-lists">
+            <section>
+              <h4>Function names</h4>
+              <div id="functionList" class="analysis-list empty-list">No function detected yet.</div>
+            </section>
+            <section>
+              <h4>Table keys</h4>
+              <div id="tableList" class="analysis-list empty-list">No table detected yet.</div>
+            </section>
+            <section>
+              <h4>Services</h4>
+              <div id="serviceList" class="analysis-list empty-list">No service detected yet.</div>
+            </section>
+            <section>
+              <h4>Requires</h4>
+              <div id="requireList" class="analysis-list empty-list">No require detected yet.</div>
+            </section>
+          </div>
+          <section class="bug-console">
+            <div class="bug-console-header">
+              <div class="bug-console-title">
+                <h4>Bug console</h4>
+                <span id="bugConsoleBadge">No issues detected</span>
+              </div>
+              <button id="fixAllSafeBugs" class="ghost-button" type="button" disabled>Fix all safe bugs</button>
+            </div>
+            <div id="bugList" class="analysis-list empty-list">No obvious bug detected yet.</div>
+          </section>
+        </section>
+        <div class="editor-grid">
+          <div>
+            <h3>Source</h3>
+            <div id="sourceView" class="code-block code-panel muted">Waiting for a file...</div>
+          </div>
+          <div>
+            <h3>Reconstructed output</h3>
+            <div id="outputView" class="code-block code-panel muted">The result will appear here.</div>
+          </div>
+        </div>
+        <section id="diffPanel" class="diff-panel">
+          <div class="diff-header">
+            <h3>Diff view</h3>
+            <span id="diffMeta">Waiting for a file</span>
+          </div>
+          <div id="diffView" class="code-block code-panel muted">No diff available yet.</div>
+        </section>
+        <section class="share-panel share-cta">
+          <div>
+            <h3>Community Share</h3>
+          </div>
+          <a class="ghost-button page-link-button" href="community.html">Open Community Page</a>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <div id="dropOverlay" class="drop-overlay" hidden>
+    <div class="drop-card">
+      <strong>Drop Luau files here</strong>
+      <span>They will be added to your local history.</span>
+    </div>
+  </div>
+  <div id="toast" class="toast" aria-live="polite" hidden></div>
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script src="script-ultimate.js"></script>
+</body>
+</html>

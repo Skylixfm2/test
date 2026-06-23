@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luau Community Share</title>
+  <link rel="stylesheet" href="styles.css?v=font20260606">
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="top-nav">
+      <a class="page-link" href="app.html">Workspace</a>
+      <a class="page-link active" href="community.html">Community</a>
+      <a class="page-link" href="post.html">Post</a>
+      <a class="page-link" href="pet-icon-maker.html">Pet Icons</a>
+      <a class="page-link" href="store.html">Shop</a>
+      <a class="page-link" href="orders.html">My Orders</a>
+      <a id="adminNavLink" class="page-link" href="admin.html" hidden>Admin</a>
+      <button id="toggleTheme" class="page-link page-link-button" type="button">Dark mode</button>
+    </nav>
+
+    <section class="gmail-auth" data-gmail-auth></section>
+
+    <section class="hero">
+      <p class="eyebrow">Local • Community • Share</p>
+      <h1>Community Share</h1>
+    </section>
+
+    <section class="panel share-page">
+      <div class="share-header">
+        <div>
+          <h3>Shared Scripts</h3>
+        </div>
+      </div>
+
+      <div class="history-tools share-sort-tools">
+        <div class="filter-group">
+          <button class="filter-button active share-sort-button" data-sort="latest">Latest</button>
+          <button class="filter-button share-sort-button" data-sort="likes">Most liked</button>
+          <button class="filter-button share-sort-button" data-sort="title">A-Z</button>
+        </div>
+      </div>
+
+      <div class="share-compose">
+        <label class="search-shell">
+          <input id="shareSearchInput" type="search" placeholder="Search shared script names">
+        </label>
+      </div>
+
+      <div id="shareBoard" class="share-board empty-list">No shared posts yet.</div>
+    </section>
+  </main>
+
+  <div id="scriptModal" class="modal-overlay" hidden>
+    <div class="modal-card modal-script-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">Shared script</h3>
+        <div class="modal-header-actions">
+          <button id="copyModalCode" class="ghost-button" type="button">Copy code</button>
+          <button id="closeModal" class="ghost-button" type="button">Close</button>
+        </div>
+      </div>
+      <pre id="modalCode" class="code-block code-panel modal-script-code"></pre>
+    </div>
+  </div>
+  <div id="toast" class="toast" aria-live="polite" hidden></div>
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script src="script-community-view.js"></script>
+</body>
+</html>
