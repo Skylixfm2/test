@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claim Reward</title>
+  <link rel="stylesheet" href="styles.css?v=lusive-store">
+  <style>
+    .claim-card { display: grid; gap: 16px; padding: 24px; margin-top: 28px; border-radius: 14px; }
+    .claim-card h1 { margin: 0; font-size: clamp(2.2rem, 5vw, 4rem); }
+    .claim-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .claim-meta div { padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.04); }
+    .claim-meta span { display: block; color: #98a6ba; font-size: 0.78rem; font-weight: 900; text-transform: uppercase; }
+    .claim-file { color: #61f0ff; overflow-wrap: anywhere; font-family: Consolas, "Cascadia Code", monospace; }
+    .claim-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .claim-error { color: #ffb7b7; }
+    @media (max-width: 640px) { .claim-meta { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="top-nav">
+      <a class="page-link" href="store.html">Shop</a>
+      <a class="page-link" href="orders.html">My Orders</a>
+      <a class="page-link" href="adminOrders.html">Admin Orders</a>
+      <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link" href="adminKeys.html">Admin Keys</a>
+    </nav>
+    <section class="gmail-auth" data-gmail-auth></section>
+
+    <section id="claimContent" class="panel claim-card"></section>
+  </main>
+
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script>
+    const STORE_ORDERS_KEY = "lusive-store-orders";
+    const CLAIM_CUSTOMER_EMAIL_KEY = "lusive-customer-email";
+    const DEFAULT_REWARD_FILE = "rewards/[] Adopt Me! (Decompile).rbxl";
+    const params = new URLSearchParams(location.search);
+    const orderId = params.get("id") || "";
+
+    function getOrders() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_ORDERS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function normalizeEmail(email) {
+      return String(email || "").trim().toLowerCase();
+    }
+
+    function getCustomerEmail() {
+      return window.gmailAuth?.getEmail?.() || normalizeEmail(localStorage.getItem(CLAIM_CUSTOMER_EMAIL_KEY));
+    }
+
+    function renderClaim() {
+      const order = getOrders().find((entry) => entry.id === orderId);
+      const content = document.querySelector("#claimContent");
+
+      if (!order) {
+        content.innerHTML = `<h1>Reward introuvable</h1><p class="claim-error">Commande inconnue.</p>`;
+        return;
+      }
+
+      if (order.status !== "accepted") {
+        content.innerHTML = `<h1>Reward bloque</h1><p class="claim-error">Cette commande n'est pas encore acceptee.</p>`;
+        return;
+      }
+
+      if (normalizeEmail(order.customerEmail) && normalizeEmail(order.customerEmail) !== getCustomerEmail()) {
+        content.innerHTML = `<h1>Reward bloque</h1><p class="claim-error">Connecte-toi avec le Gmail utilise pour cette commande.</p><div class="claim-actions"><a class="ghost-button" href="orders.html">Retour My Orders</a></div>`;
+        return;
+      }
+
+      const product = (order.products || [])[0] || {};
+      const assignedKeys = Array.isArray(order.assignedKeys) ? order.assignedKeys : [];
+      if (product.fulfillment === "key" || product.id === "codes") {
+        content.innerHTML = `
+          <p class="eyebrow">Key disponible</p>
+          <h1>Claim Key</h1>
+          <div class="claim-meta">
+            <div><span>Commande ID</span>${order.id}</div>
+            <div><span>Produit</span>${product.name || "-"}</div>
+            <div><span>Status</span>${order.status}</div>
+            <div><span>Key</span><span class="claim-file">${assignedKeys.join(", ") || "Aucune key attachee"}</span></div>
+          </div>
+          <div class="claim-actions">
+            <button class="page-link active" type="button" onclick="navigator.clipboard.writeText('${assignedKeys.join("\\n")}')">Copier la key</button>
+            <a class="ghost-button" href="orders.html">Retour My Orders</a>
+          </div>
+        `;
+        return;
+      }
+
+      const rewardFile = order.rewardFile || product.rewardFile || DEFAULT_REWARD_FILE;
+      const rewardHref = encodeURI(rewardFile);
+      content.innerHTML = `
+        <p class="eyebrow">Reward disponible</p>
+        <h1>Claim Reward</h1>
+        <div class="claim-meta">
+          <div><span>Commande ID</span>${order.id}</div>
+          <div><span>Produit</span>${product.name || "-"}</div>
+          <div><span>Status</span>${order.status}</div>
+          <div><span>Fichier</span><span class="claim-file">${rewardFile}</span></div>
+        </div>
+        <div class="claim-actions">
+          <a class="page-link active" href="${rewardHref}" download>Telecharger le reward</a>
+          <a class="ghost-button" href="orders.html">Retour My Orders</a>
+        </div>
+      `;
+    }
+
+    renderClaim();
+  </script>
+</body>
+</html>

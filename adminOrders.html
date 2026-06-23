@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Orders</title>
+  <link rel="stylesheet" href="styles.css?v=lusive-store">
+  <style>
+    .admin-orders-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin: 28px 0; flex-wrap: wrap; }
+    .admin-orders-head h1 { margin: 0; font-size: clamp(2.2rem, 5vw, 4.4rem); }
+    .admin-order-search { display: flex; gap: 10px; margin: 0 0 18px; flex-wrap: wrap; }
+    .admin-order-search input { flex: 1 1 280px; min-height: 44px; }
+    .orders-board { display: grid; gap: 14px; }
+    .order-card { display: grid; gap: 14px; padding: 18px; border-radius: 12px; background: rgba(10, 18, 35, 0.92) !important; border: 1px solid rgba(97, 240, 255, 0.16); color: #f7fbff; }
+    .order-top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .order-id { color: #61f0ff; font-family: Consolas, "Cascadia Code", monospace; overflow-wrap: anywhere; }
+    .order-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .order-meta div { padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.04); color: #dce5ff; }
+    .order-meta span { display: block; color: #98a6ba; font-size: 0.78rem; font-weight: 900; text-transform: uppercase; }
+    .order-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .status-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 6px 10px; border-radius: 999px; font-weight: 900; }
+    .status-pending { background: rgba(255, 209, 47, 0.16); color: #ffd12f; }
+    .status-accepted { background: rgba(74, 255, 173, 0.14); color: #4affa8; }
+    .status-rejected { background: rgba(255, 95, 95, 0.16); color: #ff7777; }
+    .access-denied, .empty-orders { padding: 22px; color: #98a6ba; }
+    @media (max-width: 820px) { .order-meta { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .order-meta { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <nav class="top-nav">
+      <a class="page-link" href="store.html">Shop</a>
+      <a class="page-link" href="orders.html">My Orders</a>
+      <a class="page-link active" href="adminOrders.html">Admin Orders</a>
+      <a class="page-link" href="adminShop.html">Admin Shop</a>
+      <a class="page-link" href="adminKeys.html">Admin Keys</a>
+      <a class="page-link" href="admin.html">Admin</a>
+    </nav>
+    <section class="gmail-auth" data-gmail-auth></section>
+
+    <section class="admin-orders-head">
+      <div>
+        <p class="eyebrow">Validation des commandes</p>
+        <h1>Admin Orders</h1>
+      </div>
+      <span id="accessBadge" class="history-pill">verification</span>
+    </section>
+
+    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis. Connecte-toi avec le Gmail admin.</section>
+
+    <section id="adminOrdersPanel" hidden>
+      <div class="admin-order-search">
+        <input id="adminOrderSearchInput" class="account-input" type="search" placeholder="Chercher avec un Commande ID">
+        <button id="adminOrderSearchReset" class="ghost-button" type="button">Reset</button>
+      </div>
+      <section id="ordersBoard" class="orders-board"></section>
+    </section>
+  </main>
+
+  <script type="module" src="firebase-auth.js"></script>
+  <script src="auth-fallback.js"></script>
+  <script>
+    const STORE_ORDERS_KEY = "lusive-store-orders";
+    const STORE_KEYS_KEY = "lusive-store-keys";
+    const STORE_PRODUCTS_KEY = "lusive-store-products";
+    const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
+    const EMAIL_VERIFIED_KEY = "lusive-email-verified";
+    const ADMIN_EMAIL = "solarydigix@gmail.com";
+    const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+    let orderSearch = "";
+
+    function isAdmin() {
+      return localStorage.getItem(EMAIL_VERIFIED_KEY) === "true"
+        && String(localStorage.getItem(CUSTOMER_EMAIL_KEY) || "").trim().toLowerCase() === ADMIN_EMAIL;
+    }
+
+    function getOrders() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_ORDERS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveOrders(orders) {
+      localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+    }
+
+    function getProducts() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_PRODUCTS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveProducts(products) {
+      localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+    }
+
+    function stockCount(stock) {
+      const match = String(stock || "").match(/\d+/);
+      return match ? Number(match[0]) : 0;
+    }
+
+    function formatStock(count) {
+      return count <= 0 ? "Out of stock" : `${count} in stock`;
+    }
+
+    function getKeys() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORE_KEYS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveKeys(keys) {
+      localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+    }
+
+    function normalizeKeyType(type) {
+      return String(type || "Key")
+        .trim()
+        .replace(/[^A-Za-z0-9-]/g, "")
+        .slice(0, 24) || "Key";
+    }
+
+    function fullKey(entry) {
+      const type = normalizeKeyType(entry.type || "Key");
+      const rawKey = String(entry.key || "");
+      return rawKey.includes("_") ? rawKey : `${type}_${rawKey}`;
+    }
+
+    function keyEntryType(entry) {
+      const rawKey = String(entry.key || "");
+      return rawKey.includes("_") ? normalizeKeyType(rawKey.split("_")[0]) : normalizeKeyType(entry.type || "Key");
+    }
+
+    function assignKeysToOrder(order) {
+      const product = (order.products || [])[0] || {};
+      if (product.fulfillment !== "key" && product.id !== "codes") return order;
+      if (Array.isArray(order.assignedKeys) && order.assignedKeys.length) return order;
+
+      const quantity = Math.max(1, Number(order.quantity || product.quantity || 1));
+      const expectedType = normalizeKeyType(product.keyType || "Key");
+      const keys = getKeys();
+      const available = keys.filter((entry) => entry.status === "available" && keyEntryType(entry) === expectedType).slice(0, quantity);
+      if (available.length < quantity) {
+        alert(`Pas assez de keys ${expectedType} disponibles. Keys trouvees: ${available.length}/${quantity}.`);
+        return null;
+      }
+
+      const assignedKeyIds = new Set(available.map((entry) => entry.id));
+      saveKeys(keys.map((entry) => assignedKeyIds.has(entry.id)
+        ? { ...entry, status: "used", orderId: order.id, usedAt: new Date().toISOString() }
+        : entry));
+      return {
+        ...order,
+        assignedKeys: available.map((entry) => fullKey(entry))
+      };
+    }
+
+    function restoreOrderStock(order) {
+      if (order.stockRestoredAt) return order;
+      const orderProducts = Array.isArray(order.products) ? order.products : [];
+      if (!orderProducts.length) return { ...order, stockRestoredAt: new Date().toISOString() };
+      const products = getProducts();
+      saveProducts(products.map((product) => {
+        const orderProduct = orderProducts.find((entry) => entry.id === product.id);
+        if (!orderProduct) return product;
+        const quantity = Math.max(1, Number(orderProduct.quantity || order.quantity || 1));
+        return { ...product, stock: formatStock(stockCount(product.stock) + quantity) };
+      }));
+      return { ...order, stockRestoredAt: new Date().toISOString() };
+    }
+
+    function consumeRestoredOrderStock(order) {
+      if (!order.stockRestoredAt) return order;
+      const orderProducts = Array.isArray(order.products) ? order.products : [];
+      if (!orderProducts.length) {
+        const { stockRestoredAt, ...nextOrder } = order;
+        return nextOrder;
+      }
+      const products = getProducts();
+      saveProducts(products.map((product) => {
+        const orderProduct = orderProducts.find((entry) => entry.id === product.id);
+        if (!orderProduct) return product;
+        const quantity = Math.max(1, Number(orderProduct.quantity || order.quantity || 1));
+        return { ...product, stock: formatStock(stockCount(product.stock) - quantity) };
+      }));
+      const { stockRestoredAt, ...nextOrder } = order;
+      return nextOrder;
+    }
+
+    function setOrderStatus(id, status) {
+      if (!isAdmin()) return;
+      saveOrders(getOrders().map((order) => {
+        if (order.id !== id) return order;
+        const statusOrder = status === "rejected" ? restoreOrderStock(order) : order;
+        const acceptedOrder = status === "accepted" ? consumeRestoredOrderStock(statusOrder) : statusOrder;
+        const nextOrder = status === "accepted" ? assignKeysToOrder(acceptedOrder) : acceptedOrder;
+        if (!nextOrder) return order;
+        return { ...nextOrder, status, reviewedAt: new Date().toISOString() };
+      }));
+      renderOrders();
+    }
+
+    function deleteOrder(id) {
+      if (!isAdmin()) return;
+      if (!confirm("Supprimer cette commande ?")) return;
+      saveOrders(getOrders().map((order) => order.id === id ? { ...order, hiddenFromAdmin: true } : order));
+      renderOrders();
+    }
+
+    function statusClass(status) {
+      return status === "accepted" ? "status-accepted" : status === "rejected" ? "status-rejected" : "status-pending";
+    }
+
+    function renderOrders() {
+      if (!isAdmin()) return;
+      const allOrders = getOrders();
+      const orders = orderSearch
+        ? allOrders.filter((order) => !order.hiddenFromAdmin && String(order.id || "").toLowerCase().includes(orderSearch.toLowerCase()))
+        : allOrders.filter((order) => !order.hiddenFromAdmin);
+      const board = document.querySelector("#ordersBoard");
+
+      if (!orders.length) {
+        board.innerHTML = `<section class="panel empty-orders">${orderSearch ? "Aucune commande avec cet ID." : "Aucune commande."}</section>`;
+        return;
+      }
+
+      board.innerHTML = orders.map((order) => `
+        <article class="order-card">
+          <div class="order-top">
+            <div>
+              <strong>Commande</strong>
+              <div class="order-id">${order.id}</div>
+            </div>
+            <span class="status-pill ${statusClass(order.status)}">${order.status || "pending"}</span>
+          </div>
+          <div class="order-meta">
+            <div><span>Produit</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
+            <div><span>Total</span>${order.totalLabel || money.format(Number(order.total || 0))}</div>
+            <div><span>Paiement</span>${order.provider || "-"}</div>
+            <div><span>Date</span>${order.createdAt ? new Date(order.createdAt).toLocaleString("fr-FR") : "-"}</div>
+          </div>
+          <div class="order-meta">
+            <div><span>Pseudo compte</span>${order.customerPseudo || "-"}</div>
+            <div><span>Email compte</span>${order.customerEmail || "-"}</div>
+            <div><span>Email commande</span>${order.contactEmail || "-"}</div>
+            <div><span>Mail PayPal</span>${order.paypalSenderEmail || "-"}</div>
+            <div><span>IBAN acheteur</span>${order.payerIban || "-"}</div>
+            <div><span>Pseudo Roblox</span>${order.username || "-"}</div>
+            <div><span>Preuve transaction</span>${order.transactionProofName || "-"}</div>
+          </div>
+          <div class="order-meta">
+            <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
+            <div><span>Keys livrees</span>${(order.assignedKeys || []).join(", ") || "-"}</div>
+            <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>
+          </div>
+          <div class="order-actions">
+            <button type="button" onclick="setOrderStatus('${order.id}', 'accepted')">Accepter</button>
+            <button type="button" class="ghost-button" onclick="setOrderStatus('${order.id}', 'rejected')">Refuser</button>
+            <button type="button" class="ghost-button" onclick="deleteOrder('${order.id}')">Supprimer</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderPage() {
+      const allowed = isAdmin();
+      document.querySelector("#accessBadge").textContent = allowed ? "admin actif" : "acces bloque";
+      document.querySelector("#accessDenied").hidden = allowed;
+      document.querySelector("#adminOrdersPanel").hidden = !allowed;
+      if (allowed) renderOrders();
+    }
+
+    document.querySelector("#adminOrderSearchInput").addEventListener("input", (event) => {
+      orderSearch = event.target.value.trim();
+      renderOrders();
+    });
+
+    document.querySelector("#adminOrderSearchReset").addEventListener("click", () => {
+      orderSearch = "";
+      document.querySelector("#adminOrderSearchInput").value = "";
+      renderOrders();
+    });
+
+    renderPage();
+    window.addEventListener("gmail-auth-change", renderPage);
+    window.addEventListener("storage", renderPage);
+  </script>
+</body>
+</html>
