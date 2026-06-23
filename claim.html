@@ -12,6 +12,7 @@
     .claim-meta div { padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.04); }
     .claim-meta span { display: block; color: #98a6ba; font-size: 0.78rem; font-weight: 900; text-transform: uppercase; }
     .claim-file { color: #61f0ff; overflow-wrap: anywhere; font-family: Consolas, "Cascadia Code", monospace; }
+    .claim-code { max-height: 360px; overflow: auto; padding: 14px; border-radius: 10px; background: rgba(5, 9, 18, 0.86); border: 1px solid rgba(97, 240, 255, 0.18); color: #dff7ff; white-space: pre-wrap; overflow-wrap: anywhere; font-family: Consolas, "Cascadia Code", monospace; }
     .claim-actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .claim-error { color: #ffb7b7; }
     .claim-status { color: #61f0ff; font-weight: 900; }
@@ -98,7 +99,8 @@
       const product = (order.products || [])[0] || {};
       const location = order.scriptLocation || product.scriptLocation || "ReplicatedStorage";
       const scriptClass = order.scriptClass || product.scriptClass || "ModuleScript";
-      navigator.clipboard.writeText(`Location: ${location}\nScript class: ${scriptClass}`);
+      const scriptContent = order.scriptContent || product.scriptContent || "";
+      navigator.clipboard.writeText(`Location: ${location}\nScript class: ${scriptClass}\n\n${scriptContent}`);
     }
 
     function renderClaim() {
@@ -154,6 +156,7 @@
       if (product.fulfillment === "script") {
         const scriptLocation = order.scriptLocation || product.scriptLocation || "ReplicatedStorage";
         const scriptClass = order.scriptClass || product.scriptClass || "ModuleScript";
+        const scriptContent = order.scriptContent || product.scriptContent || "";
         content.innerHTML = `
           <p class="eyebrow">Script available</p>
           <h1>Claim Script</h1>
@@ -163,8 +166,9 @@
             <div><span>Put it in</span><span class="claim-file">${escapeHtml(scriptLocation)}</span></div>
             <div><span>Script type</span><span class="claim-file">${escapeHtml(scriptClass)}</span></div>
           </div>
+          <pre class="claim-code">${escapeHtml(scriptContent || "-- No script code attached to this product.")}</pre>
           <div class="claim-actions">
-            <button class="page-link active" type="button" onclick="copyScriptDelivery('${order.id}')">Copy script instructions</button>
+            <button class="page-link active" type="button" onclick="copyScriptDelivery('${order.id}')">Copy script + instructions</button>
             <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
             <a class="ghost-button" href="orders.html">Back to My Orders</a>
           </div>

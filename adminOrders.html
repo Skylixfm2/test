@@ -381,6 +381,10 @@
       return status === "accepted" ? "status-accepted" : status === "rejected" ? "status-rejected" : "status-pending";
     }
 
+    function orderType(order) {
+      return primaryProduct(order).fulfillment || "file";
+    }
+
     function renderOrders() {
       if (!isAdmin()) return;
       const allOrders = getOrders();
@@ -394,7 +398,11 @@
         return;
       }
 
-      board.innerHTML = orders.map((order) => `
+      board.innerHTML = orders.map((order) => {
+        const type = orderType(order);
+        const isAccount = type === "account";
+        const isScript = type === "script";
+        return `
         <article class="order-card">
           <div class="order-top">
             <div>
@@ -421,21 +429,26 @@
           <div class="order-meta">
             <div><span>Gamepass proof</span>${order.gamepassProofName || "-"}</div>
             <div><span>Delivered keys</span>${(order.assignedKeys || []).join(", ") || "-"}</div>
-            <div><span>Delivered account</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryLogin || order.deliveryAccounts || "-") : "after approval"}</div></div>
-            <div><span>Password</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryPassword || "-") : "after approval"}</div></div>
-            <div><span>Script delivery</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.scriptDelivery || [order.scriptLocation, order.scriptClass].filter(Boolean).join(" / ") || "-") : "after approval"}</div></div>
+            ${isAccount ? `
+              <div><span>Delivered account</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryLogin || order.deliveryAccounts || "-") : "after approval"}</div></div>
+              <div><span>Password</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryPassword || "-") : "after approval"}</div></div>
+            ` : ""}
+            ${isScript ? `
+              <div><span>Script delivery</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.scriptDelivery || [order.scriptLocation, order.scriptClass].filter(Boolean).join(" / ") || "-") : "after approval"}</div></div>
+            ` : ""}
             <div><span>Rejection reason</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
             <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "pending"}</div>
           </div>
           <div class="order-actions">
             <button type="button" onclick="setOrderStatus('${order.id}', 'accepted')">Accept</button>
-            <button type="button" class="ghost-button" onclick="deliverAccount('${order.id}')">Deliver account</button>
-            <button type="button" class="ghost-button" onclick="deliverScript('${order.id}')">Deliver script</button>
+            ${isAccount ? `<button type="button" class="ghost-button" onclick="deliverAccount('${order.id}')">Deliver account</button>` : ""}
+            ${isScript ? `<button type="button" class="ghost-button" onclick="deliverScript('${order.id}')">Deliver script</button>` : ""}
             <button type="button" class="ghost-button" onclick="setOrderStatus('${order.id}', 'rejected')">Reject</button>
             <button type="button" class="ghost-button" onclick="deleteOrder('${order.id}')">Delete</button>
           </div>
         </article>
-      `).join("");
+      `;
+      }).join("");
     }
 
     function renderPage() {

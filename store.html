@@ -230,7 +230,7 @@
       { id: "monthly-key", name: "Monthly Key", price: 14.99, robuxPrice: 2500, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
       { id: "lifetime-key", name: "Lifetime Key", price: 29.99, robuxPrice: 5000, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "key" },
       { id: "bundle-keys", name: "Bundle 5 Keys", price: 11.99, robuxPrice: 1800, stock: "Out of stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: true, fulfillment: "key" },
-      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "script", scriptLocation: "ReplicatedStorage", scriptClass: "ModuleScript" },
+      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "script", scriptLocation: "ReplicatedStorage", scriptClass: "ModuleScript", scriptContent: "-- Paste your delivered script here" },
       { id: "source-pack", name: "Source Pack", price: 12.99, robuxPrice: 1900, stock: "40 in stock", robloxLink: "https://www.roblox.com/fr/game-pass/1862510568/1000", rewardFile: DEFAULT_REWARD_FILE, allowMultiple: false, fulfillment: "file" }
     ];
 
@@ -294,7 +294,8 @@
             allowMultiple: Boolean(product.allowMultiple),
             keyType: product.keyType || fallback.keyType || "Key",
             scriptLocation: product.scriptLocation || fallback.scriptLocation || "ReplicatedStorage",
-            scriptClass: product.scriptClass || fallback.scriptClass || "ModuleScript"
+            scriptClass: product.scriptClass || fallback.scriptClass || "ModuleScript",
+            scriptContent: product.scriptContent || fallback.scriptContent || ""
             };
           });
           const existingIds = new Set(normalized.map((product) => product.id));
@@ -511,7 +512,8 @@
         totalLabel: proof.payment === "roblox" ? formatRobux(robuxTotal()) : money.format(total()),
         currency: proof.payment === "roblox" ? "R$" : "EUR",
         robuxTotal: proof.payment === "roblox" ? robuxTotal() : 0,
-        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE, fulfillment: selectedProduct.fulfillment || "file", keyType: selectedProduct.keyType || "Key", scriptLocation: selectedProduct.scriptLocation || "ReplicatedStorage", scriptClass: selectedProduct.scriptClass || "ModuleScript" }] : [],
+        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE, fulfillment: selectedProduct.fulfillment || "file", keyType: selectedProduct.keyType || "Key", scriptLocation: selectedProduct.scriptLocation || "ReplicatedStorage", scriptClass: selectedProduct.scriptClass || "ModuleScript", scriptContent: selectedProduct.scriptContent || "" }] : [],
+        scriptContent: selectedProduct?.scriptContent || "",
         rewardFile: selectedProduct?.rewardFile || DEFAULT_REWARD_FILE,
         transactionProofName: proof.transactionProofName,
         gamepassProofName: proof.gamepassProofName,
