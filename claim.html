@@ -187,6 +187,13 @@
             <label>Special review
               <textarea id="claimReviewText" placeholder="Write your review here"></textarea>
             </label>
+            <label>
+              <span>Public email</span>
+              <select id="claimReviewEmailVisibility">
+                <option value="visible">Show my email on public Discord</option>
+                <option value="hidden">Hide my email on public Discord</option>
+              </select>
+            </label>
             <button class="page-link active" type="button" onclick="submitReview('${order.id}')">Send review</button>
           `}
         </div>
@@ -208,6 +215,7 @@
       if (!order || order.reviewSubmitted) return;
       const rating = Number(document.querySelector("#claimReviewRating")?.value);
       const reviewText = String(document.querySelector("#claimReviewText")?.value || "").trim();
+      const hidePublicEmail = document.querySelector("#claimReviewEmailVisibility")?.value === "hidden";
       if (!Number.isFinite(rating) || rating < 0 || rating > 10) {
         document.querySelector("#claimProblemStatus").textContent = "Enter a rating between 0 and 10.";
         return;
@@ -221,7 +229,7 @@
         const response = await fetch(CLAIM_REVIEW_ENDPOINT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order, rating, review: reviewText, email: getCustomerEmail() || normalizeEmail(order.customerEmail) })
+          body: JSON.stringify({ order, rating, review: reviewText, email: getCustomerEmail() || normalizeEmail(order.customerEmail), hidePublicEmail })
         });
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));

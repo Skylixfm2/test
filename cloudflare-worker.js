@@ -230,11 +230,13 @@ async function handleReview(request, env) {
   const rating = Math.max(0, Math.min(10, Number(body.rating || 0)));
   const review = cleanText(body.review || "No review");
   const email = cleanText(body.email || order.customerEmail || "-");
+  const publicEmail = body.hidePublicEmail ? "Hidden by customer" : email;
   const productLabel = Array.isArray(order.products)
     ? order.products.map((item) => `${item.name || item.id} x${item.quantity || 1}`).join(", ")
     : cleanText(order.productName || order.productId);
 
-  await sendDiscordJson(env.REVIEW_WEBHOOK_URL, {
+  await Promise.all([
+    sendDiscordJson(env.REVIEW_WEBHOOK_URL, {
     content: `New review: ${rating}/10 for ${cleanText(order.id)}`,
     embeds: [{
       title: "Customer review",
@@ -248,7 +250,21 @@ async function handleReview(request, env) {
       ],
       timestamp: new Date().toISOString()
     }]
-  });
+    }),
+    sendDiscordJson(env.PUBLIC_REVIEW_WEBHOOK_URL, {
+      content: `New public review: ${rating}/10`,
+      embeds: [{
+        title: "Customer review",
+        color: rating >= 8 ? 0x4affad : rating >= 5 ? 0xffd12f : 0xff5f5f,
+        fields: [
+          { name: "Rating", value: `${rating}/10`, inline: true },
+          { name: "Email", value: publicEmail, inline: true },
+          { name: "Review", value: review, inline: false }
+        ],
+        timestamp: new Date().toISOString()
+      }]
+    })
+  ]);
 
   return json({ ok: true });
 }
@@ -271,7 +287,8 @@ export default {
           stock: Boolean(env.STOCK_WEBHOOK_URL),
           newProduct: Boolean(env.NEW_PRODUCT_WEBHOOK_URL),
           issue: Boolean(env.ISSUE_WEBHOOK_URL),
-          review: Boolean(env.REVIEW_WEBHOOK_URL)
+          review: Boolean(env.REVIEW_WEBHOOK_URL),
+          publicReview: Boolean(env.PUBLIC_REVIEW_WEBHOOK_URL)
         }
       });
     }
