@@ -77,6 +77,8 @@
             <input id="newProductLink" class="account-input" type="url" value="https://www.roblox.com/fr/game-pass/1862510568/1000">
             <label>Reward file</label>
             <input id="newProductReward" class="account-input" type="text" value="rewards/[] Adopt Me! (Decompile).rbxl">
+            <label>Product image URL</label>
+            <input id="newProductImage" class="account-input" type="url" placeholder="https://.../image.png">
             <label>Type</label>
             <select id="newProductFulfillment" class="account-input">
               <option value="file">Reward file</option>
@@ -166,7 +168,8 @@
             keyType: product.keyType || fallback.keyType || "Key",
             scriptLocation: product.scriptLocation ?? fallback.scriptLocation ?? "",
             scriptClass: product.scriptClass ?? fallback.scriptClass ?? "",
-            scriptContent: product.scriptContent || fallback.scriptContent || ""
+            scriptContent: product.scriptContent || fallback.scriptContent || "",
+            imageUrl: product.imageUrl ?? fallback.imageUrl ?? ""
             };
           });
           const existingIds = new Set(normalized.map((product) => product.id));
@@ -248,6 +251,7 @@
           stock: document.querySelector(`[data-product-stock="${id}"]`).value.trim() || "Out of stock",
           robloxLink: document.querySelector(`[data-product-link="${id}"]`).value.trim() || defaultRobloxLink,
           rewardFile: document.querySelector(`[data-product-reward="${id}"]`).value.trim() || defaultRewardFile,
+          imageUrl: document.querySelector(`[data-product-image="${id}"]`).value.trim(),
           fulfillment: ["key", "account", "script"].includes(document.querySelector(`[data-product-fulfillment="${id}"]`).value) ? document.querySelector(`[data-product-fulfillment="${id}"]`).value : "file",
           keyType: document.querySelector(`[data-product-key-type="${id}"]`).value.trim() || "Key",
           scriptLocation: document.querySelector(`[data-product-script-location="${id}"]`).value.trim(),
@@ -297,6 +301,7 @@
         stock: document.querySelector("#newProductStock").value.trim() || "Out of stock",
         robloxLink: document.querySelector("#newProductLink").value.trim() || defaultRobloxLink,
         rewardFile: document.querySelector("#newProductReward").value.trim() || defaultRewardFile,
+        imageUrl: document.querySelector("#newProductImage").value.trim(),
         fulfillment: ["key", "account", "script"].includes(document.querySelector("#newProductFulfillment").value) ? document.querySelector("#newProductFulfillment").value : "file",
         keyType: document.querySelector("#newProductKeyType").value.trim() || "Key",
         scriptLocation: document.querySelector("#newProductScriptLocation").value.trim(),
@@ -307,6 +312,7 @@
       saveProducts([product, ...getProducts()]);
       notifyNewProduct(product);
       document.querySelector("#newProductName").value = "";
+      document.querySelector("#newProductImage").value = "";
       document.querySelector("#newProductScriptContent").value = "";
       renderAdminShop();
     }
@@ -342,6 +348,8 @@
             <input class="account-input" data-product-link="${product.id}" type="url" value="${product.robloxLink || defaultRobloxLink}">
             <label>Reward file</label>
             <input class="account-input" data-product-reward="${product.id}" type="text" value="${product.rewardFile || defaultRewardFile}" placeholder="ex: rewards/item.rblx">
+            <label>Product image URL</label>
+            <input class="account-input" data-product-image="${product.id}" type="url" value="${escapeHtml(product.imageUrl || "")}" placeholder="https://.../image.png">
             <label>Type</label>
             <select class="account-input" data-product-fulfillment="${product.id}">
               <option value="file" ${!["key", "account", "script"].includes(product.fulfillment) ? "selected" : ""}>Reward file</option>

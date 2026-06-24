@@ -36,6 +36,10 @@
     .product-art { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-bottom: 2px solid rgba(0, 192, 255, 0.7); background: radial-gradient(circle at 16% 18%, #1297ff 0 0, transparent 30%), radial-gradient(circle at 84% 86%, #00d5ff 0 0, transparent 22%), linear-gradient(135deg, #06336a 0%, #061326 52%, #0b2f7d 100%); }
     .product-art::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 34px 34px; opacity: 0.34; }
     .product-art::after { content: "R"; position: absolute; right: 18px; top: 20px; width: 76px; height: 76px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(135deg, #f7fbff, #0d91ff); color: #05214b; font-size: 3rem; font-weight: 950; font-style: italic; box-shadow: 0 12px 24px rgba(0,0,0,0.38); }
+    .product-art.has-image { background: #071126; }
+    .product-art.has-image::before,
+    .product-art.has-image::after { display: none; }
+    .product-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     .product-badge { position: absolute; top: 10px; right: 10px; color: #61f0ff; font-size: 1.05rem; font-weight: 950; z-index: 1; }
     .product-body { display: grid; gap: 14px; padding: 16px 18px 18px; }
     .product-card h2 { min-height: 48px; margin: 0; font-size: 1.06rem; line-height: 1.2; color: #ffffff; }
@@ -296,7 +300,8 @@
             keyType: product.keyType || fallback.keyType || "Key",
             scriptLocation: product.scriptLocation ?? fallback.scriptLocation ?? "",
             scriptClass: product.scriptClass ?? fallback.scriptClass ?? "",
-            scriptContent: product.scriptContent || fallback.scriptContent || ""
+            scriptContent: product.scriptContent || fallback.scriptContent || "",
+            imageUrl: product.imageUrl ?? fallback.imageUrl ?? ""
             };
           });
           const existingIds = new Set(normalized.map((product) => product.id));
@@ -309,6 +314,15 @@
       }
       localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(defaultProducts));
       return defaultProducts;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     function getDeletedProductIds() {
@@ -326,9 +340,11 @@
         : products.filter((product) => (product.fulfillment || "file") === activeShopFilter);
       document.querySelector("#productGrid").innerHTML = visibleProducts.map(product => `
         <article class="panel product-card ${isOutOfStock(product) ? "is-out" : ""}">
-          <div class="product-art"><span class="product-badge">W</span></div>
+          <div class="product-art ${product.imageUrl ? "has-image" : ""}">
+            ${product.imageUrl ? `<img src="${escapeHtml(product.imageUrl)}" alt="${escapeHtml(product.name)}">` : `<span class="product-badge">W</span>`}
+          </div>
           <div class="product-body">
-            <h2>${product.name}</h2>
+            <h2>${escapeHtml(product.name)}</h2>
             <div class="product-meta">
               <span class="price">${money.format(product.price)}</span>
               <span class="stock">${product.stock}</span>
