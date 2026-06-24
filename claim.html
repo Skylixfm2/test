@@ -42,6 +42,7 @@
     const CLAIM_PROBLEM_ENDPOINT = "https://skylixfm-shop.solarydigix.workers.dev/issue";
     const CLAIM_ISSUE_COOLDOWN_KEY = "lusive-issue-cooldowns";
     const CLAIM_ISSUE_COOLDOWN_MS = 30 * 60 * 1000;
+    const CLAIM_ISSUE_FAILED_COOLDOWN_MS = 5 * 60 * 1000;
     const DEFAULT_REWARD_FILE = "rewards/[] Adopt Me! (Decompile).rbxl";
     const params = new URLSearchParams(location.search);
     const orderId = params.get("id") || "";
@@ -81,16 +82,18 @@
       }
     }
 
-    function setIssueCooldown(key) {
+    function setIssueCooldown(key, duration = CLAIM_ISSUE_COOLDOWN_MS) {
       localStorage.setItem(CLAIM_ISSUE_COOLDOWN_KEY, JSON.stringify({
         ...getIssueCooldowns(),
-        [key]: Date.now()
+        [key]: { at: Date.now(), duration }
       }));
     }
 
     function issueCooldownRemaining(key) {
-      const lastSentAt = Number(getIssueCooldowns()[key] || 0);
-      return Math.max(0, CLAIM_ISSUE_COOLDOWN_MS - (Date.now() - lastSentAt));
+      const entry = getIssueCooldowns()[key];
+      const lastSentAt = typeof entry === "object" ? Number(entry.at || 0) : Number(entry || 0);
+      const duration = typeof entry === "object" ? Number(entry.duration || CLAIM_ISSUE_COOLDOWN_MS) : CLAIM_ISSUE_COOLDOWN_MS;
+      return Math.max(0, duration - (Date.now() - lastSentAt));
     }
 
     function formatCooldown(ms) {
@@ -98,7 +101,7 @@
       return `${minutes} minute${minutes > 1 ? "s" : ""}`;
     }
 
-    function reportProblem(orderId) {
+    async function reportProblem(orderId) {
       const order = getOrders().find((entry) => entry.id === orderId);
       if (!order) return;
       const replyEmail = getCustomerEmail() || normalizeEmail(order.customerEmail);
@@ -110,16 +113,23 @@
       }
       const reason = prompt(`Explain the issue to open a Discord ticket.\nWe will reply by email: ${replyEmail || "your connected account email"}`);
       if (reason === null || !reason.trim()) return;
-      fetch(CLAIM_PROBLEM_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order, reason: `${reason.trim()}\nReply email: ${replyEmail || "-"}` })
-      }).then(() => {
-        setIssueCooldown(cooldownKey);
+      setIssueCooldown(cooldownKey, CLAIM_ISSUE_FAILED_COOLDOWN_MS);
+      document.querySelector("#claimProblemStatus").textContent = "Sending issue...";
+      try {
+        const response = await fetch(CLAIM_PROBLEM_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order, reason: `${reason.trim()}\nReply email: ${replyEmail || "-"}` })
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || `Worker error ${response.status}`);
+        }
+        setIssueCooldown(cooldownKey, CLAIM_ISSUE_COOLDOWN_MS);
         document.querySelector("#claimProblemStatus").textContent = `Issue sent. We will reply by email: ${replyEmail || "your connected account email"}.`;
-      }).catch(() => {
-        document.querySelector("#claimProblemStatus").textContent = "Unable to send the issue.";
-      });
+      } catch (error) {
+        document.querySelector("#claimProblemStatus").textContent = `Unable to send the issue: ${error.message}. Please wait ${formatCooldown(CLAIM_ISSUE_FAILED_COOLDOWN_MS)} before retrying.`;
+      }
     }
 
     function copyAccountDelivery(orderId) {
