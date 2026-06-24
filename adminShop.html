@@ -80,7 +80,7 @@
             <label>Type</label>
             <select id="newProductFulfillment" class="account-input">
               <option value="file">Reward file</option>
-              <option value="key">15-character key</option>
+              <option value="key">25-character key</option>
               <option value="account">Accounts / credentials</option>
               <option value="script">Script delivery</option>
             </select>
@@ -345,7 +345,7 @@
             <label>Type</label>
             <select class="account-input" data-product-fulfillment="${product.id}">
               <option value="file" ${!["key", "account", "script"].includes(product.fulfillment) ? "selected" : ""}>Reward file</option>
-              <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>15-character key</option>
+              <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>25-character key</option>
               <option value="account" ${product.fulfillment === "account" ? "selected" : ""}>Accounts / credentials</option>
               <option value="script" ${product.fulfillment === "script" ? "selected" : ""}>Script delivery</option>
             </select>
