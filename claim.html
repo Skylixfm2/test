@@ -39,7 +39,9 @@
   <script>
     const STORE_ORDERS_KEY = "lusive-store-orders";
     const CLAIM_CUSTOMER_EMAIL_KEY = "lusive-customer-email";
-    const CLAIM_PROBLEM_ENDPOINT = "https://skylixfm-shop.solarydigix.workers.dev/admin-order";
+    const CLAIM_PROBLEM_ENDPOINT = "https://skylixfm-shop.solarydigix.workers.dev/issue";
+    const CLAIM_ISSUE_COOLDOWN_KEY = "lusive-issue-cooldowns";
+    const CLAIM_ISSUE_COOLDOWN_MS = 30 * 60 * 1000;
     const DEFAULT_REWARD_FILE = "rewards/[] Adopt Me! (Decompile).rbxl";
     const params = new URLSearchParams(location.search);
     const orderId = params.get("id") || "";
@@ -70,17 +72,50 @@
         .replace(/'/g, "&#039;");
     }
 
+    function getIssueCooldowns() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(CLAIM_ISSUE_COOLDOWN_KEY) || "{}");
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function setIssueCooldown(key) {
+      localStorage.setItem(CLAIM_ISSUE_COOLDOWN_KEY, JSON.stringify({
+        ...getIssueCooldowns(),
+        [key]: Date.now()
+      }));
+    }
+
+    function issueCooldownRemaining(key) {
+      const lastSentAt = Number(getIssueCooldowns()[key] || 0);
+      return Math.max(0, CLAIM_ISSUE_COOLDOWN_MS - (Date.now() - lastSentAt));
+    }
+
+    function formatCooldown(ms) {
+      const minutes = Math.ceil(ms / 60000);
+      return `${minutes} minute${minutes > 1 ? "s" : ""}`;
+    }
+
     function reportProblem(orderId) {
       const order = getOrders().find((entry) => entry.id === orderId);
       if (!order) return;
       const replyEmail = getCustomerEmail() || normalizeEmail(order.customerEmail);
+      const cooldownKey = `${order.id}:${replyEmail || "unknown"}`;
+      const remaining = issueCooldownRemaining(cooldownKey);
+      if (remaining > 0) {
+        document.querySelector("#claimProblemStatus").textContent = `Please wait ${formatCooldown(remaining)} before opening another ticket.`;
+        return;
+      }
       const reason = prompt(`Explain the issue to open a Discord ticket.\nWe will reply by email: ${replyEmail || "your connected account email"}`);
       if (reason === null || !reason.trim()) return;
       fetch(CLAIM_PROBLEM_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order, status: "problem", reason: `${reason.trim()}\nReply email: ${replyEmail || "-"}` })
+        body: JSON.stringify({ order, reason: `${reason.trim()}\nReply email: ${replyEmail || "-"}` })
       }).then(() => {
+        setIssueCooldown(cooldownKey);
         document.querySelector("#claimProblemStatus").textContent = `Issue sent. We will reply by email: ${replyEmail || "your connected account email"}.`;
       }).catch(() => {
         document.querySelector("#claimProblemStatus").textContent = "Unable to send the issue.";

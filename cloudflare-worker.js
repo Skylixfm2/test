@@ -195,6 +195,35 @@ async function handleAdminOrder(request, env) {
   return json({ ok: true });
 }
 
+async function handleIssue(request, env) {
+  const body = await request.json();
+  const order = body.order || {};
+  const total = parseMoney(order.total);
+  const productLabel = Array.isArray(order.products)
+    ? order.products.map((item) => `${item.name || item.id} x${item.quantity || 1}`).join(", ")
+    : cleanText(order.productName || order.productId);
+
+  await sendDiscordJson(env.ISSUE_WEBHOOK_URL, {
+    content: `Customer issue / ticket: ${cleanText(order.id)}`,
+    embeds: [{
+      title: "Customer issue / ticket",
+      color: 0xffd12f,
+      fields: [
+        { name: "Order", value: cleanText(order.id), inline: false },
+        { name: "Product", value: productLabel || "-", inline: false },
+        { name: "Total", value: `${total.toFixed(2)} EUR`, inline: true },
+        { name: "Payment", value: cleanText(order.provider), inline: true },
+        { name: "Account email", value: cleanText(order.customerEmail), inline: true },
+        { name: "Order email", value: cleanText(order.contactEmail), inline: true },
+        { name: "Reason / note", value: cleanText(body.reason || "No note"), inline: false }
+      ],
+      timestamp: new Date().toISOString()
+    }]
+  });
+
+  return json({ ok: true });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -211,6 +240,7 @@ export default {
       if (url.pathname === "/order") return await handleOrder(request, env);
       if (url.pathname === "/admin-shop") return await handleAdminShop(request, env);
       if (url.pathname === "/admin-order") return await handleAdminOrder(request, env);
+      if (url.pathname === "/issue") return await handleIssue(request, env);
       return json({ error: "Not found" }, 404);
     } catch (error) {
       return json({ error: cleanText(error.message, "Worker error") }, 500);

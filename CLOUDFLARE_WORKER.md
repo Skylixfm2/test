@@ -38,6 +38,11 @@ ISSUE_WEBHOOK_URL
 Colle les webhooks Discord dans ces secrets.
 
 `ISSUE_WEBHOOK_URL` sert uniquement pour les tickets/problemes envoyes depuis la page Claim.
+La page `claim.html` envoie ces tickets vers :
+
+```js
+https://ton-vrai-worker.workers.dev/issue
+```
 
 ## 3. Modifier les URLs dans le site
 
