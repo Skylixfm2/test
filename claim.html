@@ -16,6 +16,12 @@
     .claim-actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .claim-error { color: #ffb7b7; }
     .claim-status { color: #61f0ff; font-weight: 900; }
+    .claim-review { display: none; gap: 10px; padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(97,240,255,0.16); }
+    .claim-review.open { display: grid; }
+    .claim-review label { display: grid; gap: 6px; color: #98a6ba; font-size: 0.78rem; font-weight: 900; text-transform: uppercase; }
+    .claim-review input,
+    .claim-review textarea { width: 100%; min-width: 0; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(97,240,255,0.24); background: rgba(5,9,18,0.82); color: #f7fbff; font: inherit; }
+    .claim-review textarea { min-height: 110px; resize: vertical; }
     @media (max-width: 640px) { .claim-meta { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -40,6 +46,7 @@
     const STORE_ORDERS_KEY = "lusive-store-orders";
     const CLAIM_CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const CLAIM_PROBLEM_ENDPOINT = "https://skylixfm-shop.solarydigix.workers.dev/issue";
+    const CLAIM_REVIEW_ENDPOINT = "https://skylixfm-shop.solarydigix.workers.dev/review";
     const CLAIM_ISSUE_COOLDOWN_KEY = "lusive-issue-cooldowns";
     const CLAIM_ISSUE_COOLDOWN_MS = 30 * 60 * 1000;
     const CLAIM_ISSUE_FAILED_COOLDOWN_MS = 5 * 60 * 1000;
@@ -54,6 +61,10 @@
       } catch {
         return [];
       }
+    }
+
+    function saveOrders(orders) {
+      localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
     }
 
     function normalizeEmail(email) {
@@ -108,6 +119,10 @@
     async function reportProblem(orderId) {
       const order = getOrders().find((entry) => entry.id === orderId);
       if (!order) return;
+      if (order.reviewSubmitted) {
+        document.querySelector("#claimProblemStatus").textContent = "You already sent a review for this order, so Discord tickets are disabled.";
+        return;
+      }
       const replyEmail = getCustomerEmail() || normalizeEmail(order.customerEmail);
       const cooldownKey = `${order.id}:${replyEmail || "unknown"}`;
       const admin = isAdmin();
@@ -143,6 +158,89 @@
         document.querySelector("#claimProblemStatus").textContent = webhookMissing
           ? "Issue webhook is missing in Cloudflare. Add ISSUE_WEBHOOK_URL to the Worker variables/secrets, then deploy again."
           : `Unable to send the issue: ${error.message}. Please wait ${formatCooldown(CLAIM_ISSUE_FAILED_COOLDOWN_MS)} before retrying.`;
+      }
+    }
+
+    function supportActions(orderId) {
+      const order = getOrders().find((entry) => entry.id === orderId) || {};
+      return `
+        <button class="ghost-button" type="button" onclick="showReviewForm('${orderId}')">Reviews</button>
+        ${order.reviewSubmitted ? "" : `<button class="ghost-button" type="button" onclick="reportProblem('${orderId}')">Issue / Discord ticket</button>`}
+        <a class="ghost-button" href="orders.html">Back to My Orders</a>
+      `;
+    }
+
+    function reviewPanel(order) {
+      const sent = Boolean(order.reviewSubmitted);
+      return `
+        <div id="claimReviewPanel" class="claim-review ${sent ? "open" : ""}">
+          ${sent ? `
+            <strong>Review sent</strong>
+            <div class="claim-meta">
+              <div><span>Rating</span>${escapeHtml(order.reviewRating || "-")}/10</div>
+              <div><span>Review</span>${escapeHtml(order.reviewText || "-")}</div>
+            </div>
+          ` : `
+            <label>Rating /10
+              <input id="claimReviewRating" type="number" min="0" max="10" step="1" placeholder="ex: 10">
+            </label>
+            <label>Special review
+              <textarea id="claimReviewText" placeholder="Write your review here"></textarea>
+            </label>
+            <button class="page-link active" type="button" onclick="submitReview('${order.id}')">Send review</button>
+          `}
+        </div>
+      `;
+    }
+
+    function showReviewForm(orderId) {
+      const order = getOrders().find((entry) => entry.id === orderId);
+      if (!order) return;
+      const panel = document.querySelector("#claimReviewPanel");
+      if (panel) panel.classList.toggle("open", true);
+      document.querySelector("#claimProblemStatus").textContent = order.reviewSubmitted
+        ? "Review already sent. Discord tickets are disabled for this order."
+        : "Leave a rating and a review. After sending it, Discord tickets will be disabled for this order.";
+    }
+
+    async function submitReview(orderId) {
+      const order = getOrders().find((entry) => entry.id === orderId);
+      if (!order || order.reviewSubmitted) return;
+      const rating = Number(document.querySelector("#claimReviewRating")?.value);
+      const reviewText = String(document.querySelector("#claimReviewText")?.value || "").trim();
+      if (!Number.isFinite(rating) || rating < 0 || rating > 10) {
+        document.querySelector("#claimProblemStatus").textContent = "Enter a rating between 0 and 10.";
+        return;
+      }
+      if (!reviewText) {
+        document.querySelector("#claimProblemStatus").textContent = "Write a review before sending.";
+        return;
+      }
+      document.querySelector("#claimProblemStatus").textContent = "Sending review...";
+      try {
+        const response = await fetch(CLAIM_REVIEW_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order, rating, review: reviewText, email: getCustomerEmail() || normalizeEmail(order.customerEmail) })
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || `Worker error ${response.status}`);
+        }
+        const reviewedAt = new Date().toISOString();
+        saveOrders(getOrders().map((entry) => entry.id === orderId ? {
+          ...entry,
+          reviewSubmitted: true,
+          reviewRating: String(rating),
+          reviewText,
+          reviewAt: reviewedAt
+        } : entry));
+        renderClaim();
+      } catch (error) {
+        const webhookMissing = /webhook missing/i.test(error.message);
+        document.querySelector("#claimProblemStatus").textContent = webhookMissing
+          ? "Review webhook is missing in Cloudflare. Add REVIEW_WEBHOOK_URL to the Worker variables/secrets, then deploy again."
+          : `Unable to send the review: ${error.message}.`;
       }
     }
 
@@ -221,9 +319,9 @@
           </div>
           <div class="claim-actions">
             <button class="page-link active" type="button" onclick="copyAccountDelivery('${order.id}')">Copy credentials</button>
-            <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
-            <a class="ghost-button" href="orders.html">Back to My Orders</a>
+            ${supportActions(order.id)}
           </div>
+          ${reviewPanel(order)}
           <div id="claimProblemStatus" class="claim-status"></div>
         `;
         return;
@@ -245,9 +343,9 @@
           <pre class="claim-code">${escapeHtml(scriptContent || "-- No script code attached to this product.")}</pre>
           <div class="claim-actions">
             <button class="page-link active" type="button" onclick="copyScriptDelivery('${order.id}')">Copy script + instructions</button>
-            <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
-            <a class="ghost-button" href="orders.html">Back to My Orders</a>
+            ${supportActions(order.id)}
           </div>
+          ${reviewPanel(order)}
           <div id="claimProblemStatus" class="claim-status"></div>
         `;
         return;
@@ -276,9 +374,9 @@
           ${scriptBlock}
           <div class="claim-actions">
             <button class="page-link active" type="button" onclick="copyKeyDelivery('${order.id}')">${scriptContent.trim() ? "Copy key + script" : "Copy key"}</button>
-            <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
-            <a class="ghost-button" href="orders.html">Back to My Orders</a>
+            ${supportActions(order.id)}
           </div>
+          ${reviewPanel(order)}
           <div id="claimProblemStatus" class="claim-status"></div>
         `;
         return;
@@ -297,9 +395,9 @@
         </div>
         <div class="claim-actions">
           <a class="page-link active" href="${rewardHref}" download>Download reward</a>
-          <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
-          <a class="ghost-button" href="orders.html">Back to My Orders</a>
+          ${supportActions(order.id)}
         </div>
+        ${reviewPanel(order)}
         <div id="claimProblemStatus" class="claim-status"></div>
       `;
     }

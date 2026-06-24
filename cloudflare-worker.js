@@ -224,6 +224,35 @@ async function handleIssue(request, env) {
   return json({ ok: true });
 }
 
+async function handleReview(request, env) {
+  const body = await request.json();
+  const order = body.order || {};
+  const rating = Math.max(0, Math.min(10, Number(body.rating || 0)));
+  const review = cleanText(body.review || "No review");
+  const email = cleanText(body.email || order.customerEmail || "-");
+  const productLabel = Array.isArray(order.products)
+    ? order.products.map((item) => `${item.name || item.id} x${item.quantity || 1}`).join(", ")
+    : cleanText(order.productName || order.productId);
+
+  await sendDiscordJson(env.REVIEW_WEBHOOK_URL, {
+    content: `New review: ${rating}/10 for ${cleanText(order.id)}`,
+    embeds: [{
+      title: "Customer review",
+      color: rating >= 8 ? 0x4affad : rating >= 5 ? 0xffd12f : 0xff5f5f,
+      fields: [
+        { name: "Order", value: cleanText(order.id), inline: false },
+        { name: "Product", value: productLabel || "-", inline: false },
+        { name: "Rating", value: `${rating}/10`, inline: true },
+        { name: "Email", value: email, inline: true },
+        { name: "Review", value: review, inline: false }
+      ],
+      timestamp: new Date().toISOString()
+    }]
+  });
+
+  return json({ ok: true });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -241,7 +270,8 @@ export default {
           order500: Boolean(env.ORDER_WEBHOOK_500_URL),
           stock: Boolean(env.STOCK_WEBHOOK_URL),
           newProduct: Boolean(env.NEW_PRODUCT_WEBHOOK_URL),
-          issue: Boolean(env.ISSUE_WEBHOOK_URL)
+          issue: Boolean(env.ISSUE_WEBHOOK_URL),
+          review: Boolean(env.REVIEW_WEBHOOK_URL)
         }
       });
     }
@@ -255,6 +285,7 @@ export default {
       if (url.pathname === "/admin-shop") return await handleAdminShop(request, env);
       if (url.pathname === "/admin-order") return await handleAdminOrder(request, env);
       if (url.pathname === "/issue") return await handleIssue(request, env);
+      if (url.pathname === "/review") return await handleReview(request, env);
       return json({ error: "Not found" }, 404);
     } catch (error) {
       return json({ error: cleanText(error.message, "Worker error") }, 500);
