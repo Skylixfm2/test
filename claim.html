@@ -64,6 +64,10 @@
       return window.gmailAuth?.getEmail?.() || normalizeEmail(localStorage.getItem(CLAIM_CUSTOMER_EMAIL_KEY));
     }
 
+    function isAdmin() {
+      return Boolean(window.gmailAuth?.isAdmin?.());
+    }
+
     function escapeHtml(value) {
       return String(value || "")
         .replace(/&/g, "&amp;")
@@ -106,14 +110,19 @@
       if (!order) return;
       const replyEmail = getCustomerEmail() || normalizeEmail(order.customerEmail);
       const cooldownKey = `${order.id}:${replyEmail || "unknown"}`;
-      const remaining = issueCooldownRemaining(cooldownKey);
-      if (remaining > 0) {
-        document.querySelector("#claimProblemStatus").textContent = `Please wait ${formatCooldown(remaining)} before opening another ticket.`;
-        return;
+      const admin = isAdmin();
+      if (!admin) {
+        const remaining = issueCooldownRemaining(cooldownKey);
+        if (remaining > 0) {
+          document.querySelector("#claimProblemStatus").textContent = `Please wait ${formatCooldown(remaining)} before opening another ticket.`;
+          return;
+        }
       }
       const reason = prompt(`Explain the issue to open a Discord ticket.\nWe will reply by email: ${replyEmail || "your connected account email"}`);
       if (reason === null || !reason.trim()) return;
-      setIssueCooldown(cooldownKey, CLAIM_ISSUE_FAILED_COOLDOWN_MS);
+      if (!admin) {
+        setIssueCooldown(cooldownKey, CLAIM_ISSUE_FAILED_COOLDOWN_MS);
+      }
       document.querySelector("#claimProblemStatus").textContent = "Sending issue...";
       try {
         const response = await fetch(CLAIM_PROBLEM_ENDPOINT, {
@@ -125,7 +134,9 @@
           const payload = await response.json().catch(() => ({}));
           throw new Error(payload.error || `Worker error ${response.status}`);
         }
-        setIssueCooldown(cooldownKey, CLAIM_ISSUE_COOLDOWN_MS);
+        if (!admin) {
+          setIssueCooldown(cooldownKey, CLAIM_ISSUE_COOLDOWN_MS);
+        }
         document.querySelector("#claimProblemStatus").textContent = `Issue sent. We will reply by email: ${replyEmail || "your connected account email"}.`;
       } catch (error) {
         document.querySelector("#claimProblemStatus").textContent = `Unable to send the issue: ${error.message}. Please wait ${formatCooldown(CLAIM_ISSUE_FAILED_COOLDOWN_MS)} before retrying.`;
