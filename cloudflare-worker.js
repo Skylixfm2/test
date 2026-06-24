@@ -1,6 +1,6 @@
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type"
 };
 
@@ -230,11 +230,25 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
+    const url = new URL(request.url);
+
+    if (request.method === "GET" && url.pathname === "/health") {
+      return json({
+        ok: true,
+        webhooks: {
+          order: Boolean(env.ORDER_WEBHOOK_URL),
+          order50: Boolean(env.ORDER_WEBHOOK_50_URL),
+          order500: Boolean(env.ORDER_WEBHOOK_500_URL),
+          stock: Boolean(env.STOCK_WEBHOOK_URL),
+          newProduct: Boolean(env.NEW_PRODUCT_WEBHOOK_URL),
+          issue: Boolean(env.ISSUE_WEBHOOK_URL)
+        }
+      });
+    }
+
     if (request.method !== "POST") {
       return json({ error: "POST only" }, 405);
     }
-
-    const url = new URL(request.url);
 
     try {
       if (url.pathname === "/order") return await handleOrder(request, env);
