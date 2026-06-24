@@ -158,10 +158,25 @@
       const order = getOrders().find((entry) => entry.id === orderId);
       if (!order) return;
       const product = (order.products || [])[0] || {};
-      const location = order.scriptLocation || product.scriptLocation || "ReplicatedStorage";
-      const scriptClass = order.scriptClass || product.scriptClass || "ModuleScript";
+      const location = order.scriptLocation || product.scriptLocation || "Not specified";
+      const scriptClass = order.scriptClass || product.scriptClass || "Not specified";
       const scriptContent = order.scriptContent || product.scriptContent || "";
       navigator.clipboard.writeText(`Location: ${location}\nScript class: ${scriptClass}\n\n${scriptContent}`);
+    }
+
+    function copyKeyDelivery(orderId) {
+      const order = getOrders().find((entry) => entry.id === orderId);
+      if (!order) return;
+      const product = (order.products || [])[0] || {};
+      const assignedKeys = Array.isArray(order.assignedKeys) ? order.assignedKeys : [];
+      const scriptContent = order.scriptContent || product.scriptContent || "";
+      const location = order.scriptLocation || product.scriptLocation || "Not specified";
+      const scriptClass = order.scriptClass || product.scriptClass || "Not specified";
+      const parts = [`Keys:\n${assignedKeys.join("\n") || "No key attached"}`];
+      if (scriptContent.trim()) {
+        parts.push(`Script instructions:\nLocation: ${location}\nScript class: ${scriptClass}\n\n${scriptContent}`);
+      }
+      navigator.clipboard.writeText(parts.join("\n\n"));
     }
 
     function renderClaim() {
@@ -215,8 +230,8 @@
       }
 
       if (product.fulfillment === "script") {
-        const scriptLocation = order.scriptLocation || product.scriptLocation || "ReplicatedStorage";
-        const scriptClass = order.scriptClass || product.scriptClass || "ModuleScript";
+        const scriptLocation = order.scriptLocation || product.scriptLocation || "Not specified";
+        const scriptClass = order.scriptClass || product.scriptClass || "Not specified";
         const scriptContent = order.scriptContent || product.scriptContent || "";
         content.innerHTML = `
           <p class="eyebrow">Script available</p>
@@ -239,6 +254,16 @@
       }
 
       if (product.fulfillment === "key" || product.id === "codes") {
+        const scriptLocation = order.scriptLocation || product.scriptLocation || "Not specified";
+        const scriptClass = order.scriptClass || product.scriptClass || "Not specified";
+        const scriptContent = order.scriptContent || product.scriptContent || "";
+        const scriptBlock = scriptContent.trim() ? `
+          <div class="claim-meta">
+            <div><span>Script location</span><span class="claim-file">${escapeHtml(scriptLocation)}</span></div>
+            <div><span>Script class</span><span class="claim-file">${escapeHtml(scriptClass)}</span></div>
+          </div>
+          <pre class="claim-code">${escapeHtml(scriptContent)}</pre>
+        ` : "";
         content.innerHTML = `
           <p class="eyebrow">Key available</p>
           <h1>Claim Key</h1>
@@ -248,8 +273,9 @@
             <div><span>Status</span>${order.status}</div>
             <div><span>Key</span><span class="claim-file">${assignedKeys.join(", ") || "No key attached"}</span></div>
           </div>
+          ${scriptBlock}
           <div class="claim-actions">
-            <button class="page-link active" type="button" onclick="navigator.clipboard.writeText('${assignedKeys.join("\\n")}')">Copy key</button>
+            <button class="page-link active" type="button" onclick="copyKeyDelivery('${order.id}')">${scriptContent.trim() ? "Copy key + script" : "Copy key"}</button>
             <button class="ghost-button" type="button" onclick="reportProblem('${order.id}')">Issue / Discord ticket</button>
             <a class="ghost-button" href="orders.html">Back to My Orders</a>
           </div>

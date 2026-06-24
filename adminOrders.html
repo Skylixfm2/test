@@ -112,6 +112,11 @@
       return primaryProduct(order).fulfillment === "script";
     }
 
+    function isKeyOrder(order) {
+      const product = primaryProduct(order);
+      return product.fulfillment === "key" || product.id === "codes";
+    }
+
     function notifyOrderReview(order, status, reason = "") {
       fetch(ADMIN_ORDER_WEBHOOK_ENDPOINT, {
         method: "POST",
@@ -255,16 +260,10 @@
 
       if (status === "accepted" && isScriptOrder(currentOrder)) {
         const product = primaryProduct(currentOrder);
-        scriptLocation = prompt("Where should the script be placed? Example: ReplicatedStorage", currentOrder.scriptLocation || product.scriptLocation || "ReplicatedStorage");
-        if (scriptLocation === null || !scriptLocation.trim()) {
-          alert("Enter the Roblox location before accepting.");
-          return;
-        }
-        scriptClass = prompt("What script class should be used? Example: ModuleScript", currentOrder.scriptClass || product.scriptClass || "ModuleScript");
-        if (scriptClass === null || !scriptClass.trim()) {
-          alert("Enter the script class before accepting.");
-          return;
-        }
+        scriptLocation = prompt("Where should the script be placed? Optional.", currentOrder.scriptLocation || product.scriptLocation || "");
+        if (scriptLocation === null) return;
+        scriptClass = prompt("What script class should be used? Optional.", currentOrder.scriptClass || product.scriptClass || "");
+        if (scriptClass === null) return;
       }
 
       if (status === "rejected") {
@@ -307,17 +306,14 @@
       if (!currentOrder) return;
       const product = primaryProduct(currentOrder);
 
-      const scriptLocation = prompt("Where should the script be placed? Example: ReplicatedStorage", currentOrder.scriptLocation || product.scriptLocation || "ReplicatedStorage");
-      if (scriptLocation === null || !scriptLocation.trim()) {
-        alert("Enter the Roblox location.");
-        return;
-      }
+      const scriptLocation = prompt("Where should the script be placed? Optional.", currentOrder.scriptLocation || product.scriptLocation || "");
+      if (scriptLocation === null) return;
 
-      const scriptClass = prompt("What script class should be used? Example: ModuleScript", currentOrder.scriptClass || product.scriptClass || "ModuleScript");
-      if (scriptClass === null || !scriptClass.trim()) {
-        alert("Enter the script class.");
-        return;
-      }
+      const scriptClass = prompt("What script class should be used? Optional.", currentOrder.scriptClass || product.scriptClass || "");
+      if (scriptClass === null) return;
+
+      const scriptContent = prompt("Script code to deliver. Optional if already saved on the product.", currentOrder.scriptContent || product.scriptContent || "");
+      if (scriptContent === null) return;
 
       let reviewedOrder = null;
       saveOrders(getOrders().map((order) => {
@@ -328,7 +324,8 @@
           status: "accepted",
           scriptLocation: scriptLocation.trim(),
           scriptClass: scriptClass.trim(),
-          scriptDelivery: `Location: ${scriptLocation.trim()}\nScript class: ${scriptClass.trim()}`,
+          scriptContent: scriptContent.trim() || product.scriptContent || acceptedOrder.scriptContent || "",
+          scriptDelivery: [scriptLocation.trim(), scriptClass.trim()].filter(Boolean).join(" / ") || "Script delivered",
           reviewedAt: new Date().toISOString()
         };
         return reviewedOrder;
@@ -403,6 +400,7 @@
         const type = orderType(order);
         const isAccount = type === "account";
         const isScript = type === "script";
+        const canDeliverScript = isScript || isKeyOrder(order);
         return `
         <article class="order-card">
           <div class="order-top">
@@ -434,7 +432,7 @@
               <div><span>Delivered account</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryLogin || order.deliveryAccounts || "-") : "after approval"}</div></div>
               <div><span>Password</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryPassword || "-") : "after approval"}</div></div>
             ` : ""}
-            ${isScript ? `
+            ${canDeliverScript ? `
               <div><span>Script delivery</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.scriptDelivery || [order.scriptLocation, order.scriptClass].filter(Boolean).join(" / ") || "-") : "after approval"}</div></div>
             ` : ""}
             <div><span>Rejection reason</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
@@ -443,7 +441,7 @@
           <div class="order-actions">
             <button type="button" onclick="setOrderStatus('${order.id}', 'accepted')">Accept</button>
             ${isAccount ? `<button type="button" class="ghost-button" onclick="deliverAccount('${order.id}')">Deliver account</button>` : ""}
-            ${isScript ? `<button type="button" class="ghost-button" onclick="deliverScript('${order.id}')">Deliver script</button>` : ""}
+            ${canDeliverScript ? `<button type="button" class="ghost-button" onclick="deliverScript('${order.id}')">Deliver script</button>` : ""}
             <button type="button" class="ghost-button" onclick="setOrderStatus('${order.id}', 'rejected')">Reject</button>
             <button type="button" class="ghost-button" onclick="deleteOrder('${order.id}')">Delete</button>
           </div>

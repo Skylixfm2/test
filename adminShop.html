@@ -87,9 +87,9 @@
             <label>Delivered key type</label>
             <input id="newProductKeyType" class="account-input" type="text" value="MadeIcon" placeholder="ex: MadeIcon">
             <label>Script location</label>
-            <input id="newProductScriptLocation" class="account-input" type="text" value="ReplicatedStorage" placeholder="ex: ReplicatedStorage">
+            <input id="newProductScriptLocation" class="account-input" type="text" placeholder="optional, ex: ReplicatedStorage">
             <label>Script class</label>
-            <input id="newProductScriptClass" class="account-input" type="text" value="ModuleScript" placeholder="ex: ModuleScript">
+            <input id="newProductScriptClass" class="account-input" type="text" placeholder="optional, ex: ModuleScript">
             <label>Script code</label>
             <textarea id="newProductScriptContent" class="account-input" placeholder="Paste the script you sell here"></textarea>
           </div>
@@ -164,8 +164,8 @@
             fulfillment: ["key", "account", "script"].includes(product.fulfillment || fallback.fulfillment) ? (product.fulfillment || fallback.fulfillment) : "file",
             allowMultiple: Boolean(product.allowMultiple),
             keyType: product.keyType || fallback.keyType || "Key",
-            scriptLocation: product.scriptLocation || fallback.scriptLocation || "ReplicatedStorage",
-            scriptClass: product.scriptClass || fallback.scriptClass || "ModuleScript",
+            scriptLocation: product.scriptLocation ?? fallback.scriptLocation ?? "",
+            scriptClass: product.scriptClass ?? fallback.scriptClass ?? "",
             scriptContent: product.scriptContent || fallback.scriptContent || ""
             };
           });
@@ -250,8 +250,8 @@
           rewardFile: document.querySelector(`[data-product-reward="${id}"]`).value.trim() || defaultRewardFile,
           fulfillment: ["key", "account", "script"].includes(document.querySelector(`[data-product-fulfillment="${id}"]`).value) ? document.querySelector(`[data-product-fulfillment="${id}"]`).value : "file",
           keyType: document.querySelector(`[data-product-key-type="${id}"]`).value.trim() || "Key",
-          scriptLocation: document.querySelector(`[data-product-script-location="${id}"]`).value.trim() || "ReplicatedStorage",
-          scriptClass: document.querySelector(`[data-product-script-class="${id}"]`).value.trim() || "ModuleScript",
+          scriptLocation: document.querySelector(`[data-product-script-location="${id}"]`).value.trim(),
+          scriptClass: document.querySelector(`[data-product-script-class="${id}"]`).value.trim(),
           scriptContent: document.querySelector(`[data-product-script-content="${id}"]`).value,
           allowMultiple: document.querySelector(`[data-product-multiple="${id}"]`).checked
         };
@@ -299,8 +299,8 @@
         rewardFile: document.querySelector("#newProductReward").value.trim() || defaultRewardFile,
         fulfillment: ["key", "account", "script"].includes(document.querySelector("#newProductFulfillment").value) ? document.querySelector("#newProductFulfillment").value : "file",
         keyType: document.querySelector("#newProductKeyType").value.trim() || "Key",
-        scriptLocation: document.querySelector("#newProductScriptLocation").value.trim() || "ReplicatedStorage",
-        scriptClass: document.querySelector("#newProductScriptClass").value.trim() || "ModuleScript",
+        scriptLocation: document.querySelector("#newProductScriptLocation").value.trim(),
+        scriptClass: document.querySelector("#newProductScriptClass").value.trim(),
         scriptContent: document.querySelector("#newProductScriptContent").value,
         allowMultiple: document.querySelector("#newProductMultiple").checked
       };
@@ -352,9 +352,9 @@
             <label>Delivered key type</label>
             <input class="account-input" data-product-key-type="${product.id}" type="text" value="${product.keyType || "Key"}" placeholder="ex: MadeIcon">
             <label>Script location</label>
-            <input class="account-input" data-product-script-location="${product.id}" type="text" value="${product.scriptLocation || "ReplicatedStorage"}" placeholder="ex: ReplicatedStorage">
+            <input class="account-input" data-product-script-location="${product.id}" type="text" value="${escapeHtml(product.scriptLocation || "")}" placeholder="optional, ex: ReplicatedStorage">
             <label>Script class</label>
-            <input class="account-input" data-product-script-class="${product.id}" type="text" value="${product.scriptClass || "ModuleScript"}" placeholder="ex: ModuleScript">
+            <input class="account-input" data-product-script-class="${product.id}" type="text" value="${escapeHtml(product.scriptClass || "")}" placeholder="optional, ex: ModuleScript">
             <label>Script code</label>
             <textarea class="account-input" data-product-script-content="${product.id}" placeholder="Paste the script you sell here">${escapeHtml(product.scriptContent || "")}</textarea>
           </div>

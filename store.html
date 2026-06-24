@@ -294,8 +294,8 @@
             fulfillment: ["key", "account", "script"].includes(product.fulfillment || fallback.fulfillment) ? (product.fulfillment || fallback.fulfillment) : "file",
             allowMultiple: Boolean(product.allowMultiple),
             keyType: product.keyType || fallback.keyType || "Key",
-            scriptLocation: product.scriptLocation || fallback.scriptLocation || "ReplicatedStorage",
-            scriptClass: product.scriptClass || fallback.scriptClass || "ModuleScript",
+            scriptLocation: product.scriptLocation ?? fallback.scriptLocation ?? "",
+            scriptClass: product.scriptClass ?? fallback.scriptClass ?? "",
             scriptContent: product.scriptContent || fallback.scriptContent || ""
             };
           });
@@ -513,7 +513,7 @@
         totalLabel: proof.payment === "roblox" ? formatRobux(robuxTotal()) : money.format(total()),
         currency: proof.payment === "roblox" ? "R$" : "EUR",
         robuxTotal: proof.payment === "roblox" ? robuxTotal() : 0,
-        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE, fulfillment: selectedProduct.fulfillment || "file", keyType: selectedProduct.keyType || "Key", scriptLocation: selectedProduct.scriptLocation || "ReplicatedStorage", scriptClass: selectedProduct.scriptClass || "ModuleScript", scriptContent: selectedProduct.scriptContent || "" }] : [],
+        products: selectedProduct ? [{ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, robuxPrice: selectedProduct.robuxPrice, quantity: proof.quantity, robloxLink: selectedProduct.robloxLink, rewardFile: selectedProduct.rewardFile || DEFAULT_REWARD_FILE, fulfillment: selectedProduct.fulfillment || "file", keyType: selectedProduct.keyType || "Key", scriptLocation: selectedProduct.scriptLocation || "", scriptClass: selectedProduct.scriptClass || "", scriptContent: selectedProduct.scriptContent || "" }] : [],
         scriptContent: selectedProduct?.scriptContent || "",
         rewardFile: selectedProduct?.rewardFile || DEFAULT_REWARD_FILE,
         transactionProofName: proof.transactionProofName,
