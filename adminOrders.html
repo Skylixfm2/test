@@ -55,6 +55,7 @@
       <div class="admin-order-search">
         <input id="adminOrderSearchInput" class="account-input" type="search" placeholder="Search by Order ID">
         <button id="adminOrderSearchReset" class="ghost-button" type="button">Reset</button>
+        <button id="adminOrderClearAll" class="ghost-button" type="button">Clear all orders</button>
       </div>
       <section id="ordersBoard" class="orders-board"></section>
     </section>
@@ -375,6 +376,15 @@
       renderOrders();
     }
 
+    function clearAllOrders() {
+      if (!isAdmin()) return;
+      if (!confirm("Delete every saved order from this browser?")) return;
+      localStorage.removeItem(STORE_ORDERS_KEY);
+      orderSearch = "";
+      document.querySelector("#adminOrderSearchInput").value = "";
+      renderOrders();
+    }
+
     function statusClass(status) {
       return status === "accepted" ? "status-accepted" : status === "rejected" ? "status-rejected" : "status-pending";
     }
@@ -468,6 +478,8 @@
       document.querySelector("#adminOrderSearchInput").value = "";
       renderOrders();
     });
+
+    document.querySelector("#adminOrderClearAll").addEventListener("click", clearAllOrders);
 
     renderPage();
     window.addEventListener("gmail-auth-change", renderPage);
