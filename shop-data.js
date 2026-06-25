@@ -19,6 +19,14 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const deprecatedProductIds = new Set([
+  "codes",
+  "daily-key",
+  "weekly-key",
+  "monthly-key",
+  "lifetime-key",
+  "bundle-keys"
+]);
 
 function clean(value) {
   return JSON.parse(JSON.stringify(value));
@@ -29,6 +37,10 @@ async function readCollection(name) {
   return snap.docs.map((item) => ({ id: item.id, ...item.data() }));
 }
 
+function activeProducts(products) {
+  return products.filter((product) => !deprecatedProductIds.has(String(product.id)));
+}
+
 async function writeCollection(name, items) {
   await Promise.all(items.map((item, index) => {
     const id = String(item.id || crypto.randomUUID());
@@ -37,17 +49,18 @@ async function writeCollection(name, items) {
 }
 
 export async function loadProducts(defaultProducts) {
-  const remote = await readCollection("products");
+  const remote = activeProducts(await readCollection("products"));
   return remote.length
     ? remote.sort((a, b) => Number(a.order ?? 9999) - Number(b.order ?? 9999))
-    : defaultProducts;
+    : activeProducts(defaultProducts);
 }
 
 export async function seedProducts(defaultProducts) {
-  const remote = await readCollection("products");
+  const remote = activeProducts(await readCollection("products"));
   if (remote.length) return remote;
-  await saveProducts(defaultProducts);
-  return defaultProducts;
+  const products = activeProducts(defaultProducts);
+  await saveProducts(products);
+  return products;
 }
 
 export async function saveProducts(products) {
