@@ -80,6 +80,11 @@ function isPseudoTaken(accounts, pseudo, currentEmail) {
   });
 }
 
+function isPseudoKnown(accounts, pseudo) {
+  const nextPseudo = normalizePseudo(pseudo);
+  return Object.values(accounts).some((account) => normalizePseudo(account?.pseudo) === nextPseudo);
+}
+
 async function hashPassword(password) {
   const bytes = new TextEncoder().encode(String(password || ""));
   const hash = await crypto.subtle.digest("SHA-256", bytes);
@@ -171,6 +176,13 @@ function dispatchAuthChange() {
 
 async function signInWithGoogle(pseudo, password) {
   const passwordHash = await hashPassword(password);
+  const accounts = getLocalAccounts();
+  const currentEmail = normalizeGmail(auth.currentUser?.email);
+
+  if (!currentEmail && isPseudoKnown(accounts, pseudo)) {
+    throw new Error("This username is already taken.");
+  }
+
   localStorage.setItem(PENDING_ACCOUNT_KEY, JSON.stringify({ pseudo, passwordHash }));
   localStorage.setItem(CUSTOMER_PSEUDO_KEY, pseudo);
   if (auth.currentUser?.email) {
