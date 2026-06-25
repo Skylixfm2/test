@@ -168,6 +168,11 @@ body {
   min-height: 42px;
 }
 
+.gmail-auth-form button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .gmail-auth-error {
   flex-basis: 100%;
   color: #ff9a9a;

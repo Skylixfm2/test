@@ -104,9 +104,12 @@ async function signInAndRequireVerifiedEmail(email, password) {
 
   await reload(credential.user);
   if (!credential.user.emailVerified) {
-    await sendEmailVerification(credential.user).catch(() => {});
+    await sendEmailVerification(credential.user, {
+      url: window.location.href,
+      handleCodeInApp: false
+    });
     localStorage.setItem(EMAIL_VERIFIED_KEY, "false");
-    throw new Error("Verification email sent. Open the Firebase link in your mailbox, then sign in again.");
+    throw new Error("VERIFICATION_SENT");
   }
 
   return credential.user;
@@ -286,7 +289,9 @@ function renderGmailAuth() {
     const status = container.querySelector(".gmail-auth-codes");
     const error = container.querySelector(".gmail-auth-error");
 
-    container.querySelector(".gmail-send-email").addEventListener("click", async () => {
+    const submitButton = container.querySelector(".gmail-send-email");
+
+    submitButton.addEventListener("click", async () => {
       error.textContent = "";
       status.textContent = "";
       const nextPseudo = pseudoInput.value.trim();
@@ -304,11 +309,19 @@ function renderGmailAuth() {
         return;
       }
       try {
+        submitButton.disabled = true;
+        status.textContent = "Checking account and sending verification email...";
         await signInWithSiteAccount(nextPseudo, nextEmail, passwordInput.value);
         status.textContent = "Account connected.";
         renderGmailAuth();
       } catch (err) {
-        error.textContent = `Sign in error: ${err.code || err.message}`;
+        if (err.message === "VERIFICATION_SENT") {
+          status.textContent = "Verification email sent. Open the Firebase link in your mailbox, then sign in again.";
+        } else {
+          error.textContent = `Sign in error: ${err.code || err.message}`;
+        }
+      } finally {
+        submitButton.disabled = false;
       }
     });
 
