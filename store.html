@@ -220,6 +220,11 @@
   </section>
 
   <script type="module" src="firebase-auth.js"></script>
+  <script type="module">
+    import * as shopData from "./shop-data.js";
+    window.shopData = shopData;
+    window.dispatchEvent(new Event("shop-data-ready"));
+  </script>
   <script src="auth-fallback.js"></script>
   <script>
     const CHECKOUT_CONFIG = {
@@ -258,7 +263,7 @@
 
     const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
     const ORDER_STORAGE_KEY = "storeOrderIds";
-    const products = getProducts();
+    let products = getProducts();
     let selectedProduct = null;
     let selectedPaymentProvider = "Roblox";
     let activeShopFilter = "all";
@@ -450,6 +455,7 @@
       localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(nextProducts));
       products.length = 0;
       products.push(...nextProducts);
+      window.shopData?.saveProducts?.(nextProducts).catch(() => {});
     }
 
     function decrementStock(productId, quantity) {
@@ -480,6 +486,7 @@
 
     function saveOrders(orders) {
       localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+      window.shopData?.saveOrders?.(orders).catch(() => {});
     }
 
     function renderShopStats() {
@@ -567,6 +574,7 @@
         createdAt: new Date().toISOString()
       };
       saveOrders([order, ...getOrders()]);
+      window.shopData?.saveOrder?.(order).catch(() => {});
       decrementStock(selectedProduct.id, proof.quantity);
       localStorage.setItem(PURCHASE_COOLDOWN_KEY, String(Date.now()));
       document.querySelector("#proofOrderResult").innerHTML = `
@@ -730,9 +738,24 @@
         renderProducts();
       });
     });
-    renderProducts();
-    renderShopStats();
+    async function loadSharedShopData() {
+      try {
+        if (!window.shopData?.loadProducts) return;
+        products = await window.shopData.loadProducts(defaultProducts);
+        localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+      } catch {
+      }
+    }
+
+    async function initShop() {
+      await loadSharedShopData();
+      renderProducts();
+      renderShopStats();
+    }
+
+    initShop();
     window.addEventListener("storage", renderShopStats);
+    window.addEventListener("shop-data-ready", initShop);
   </script>
 </body>
 </html>

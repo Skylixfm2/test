@@ -60,6 +60,11 @@
   </main>
 
   <script type="module" src="firebase-auth.js"></script>
+  <script type="module">
+    import * as shopData from "./shop-data.js";
+    window.shopData = shopData;
+    window.dispatchEvent(new Event("shop-data-ready"));
+  </script>
   <script src="auth-fallback.js"></script>
   <script>
     const STORE_ORDERS_KEY = "lusive-store-orders";
@@ -101,6 +106,7 @@
 
     function saveOrders(orders) {
       localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+      window.shopData?.saveOrders?.(orders).catch(() => {});
     }
 
     function escapeHtml(value) {
@@ -114,6 +120,15 @@
 
     function statusClass(status) {
       return status === "accepted" ? "status-accepted" : status === "rejected" ? "status-rejected" : "status-pending";
+    }
+
+    async function loadSharedOrders() {
+      try {
+        if (!window.shopData?.loadOrders) return;
+        const orders = await window.shopData.loadOrders();
+        localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+      } catch {
+      }
     }
 
     function renderOrders() {
@@ -172,7 +187,13 @@
     }
 
     window.addEventListener("gmail-auth-change", renderOrders);
-    renderOrders();
+    async function initOrders() {
+      await loadSharedOrders();
+      renderOrders();
+    }
+
+    initOrders();
+    window.addEventListener("shop-data-ready", initOrders);
   </script>
 </body>
 </html>

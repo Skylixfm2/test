@@ -92,6 +92,11 @@
   </main>
 
   <script type="module" src="firebase-auth.js"></script>
+  <script type="module">
+    import * as shopData from "./shop-data.js";
+    window.shopData = shopData;
+    window.dispatchEvent(new Event("shop-data-ready"));
+  </script>
   <script src="auth-fallback.js"></script>
   <script>
     const STORE_PRODUCTS_KEY = "lusive-store-products";
@@ -121,6 +126,7 @@
 
     function saveProducts(products) {
       localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+      window.shopData?.saveProducts?.(products).catch(() => {});
     }
 
     function getKeys() {
@@ -134,6 +140,7 @@
 
     function saveKeys(keys) {
       localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+      window.shopData?.saveKeys?.(keys).catch(() => {});
     }
 
     function syncProductStock(productId) {
@@ -203,6 +210,7 @@
         createdAt: new Date().toISOString()
       }));
       saveKeys([...created, ...keys]);
+      created.forEach((key) => window.shopData?.saveKey?.(key).catch(() => {}));
       activeTypeFilter = type;
       syncProductStock(productId);
       renderTypeFilter();
@@ -213,6 +221,7 @@
       if (!isAdmin()) return;
       const key = getKeys().find((entry) => entry.id === id);
       saveKeys(getKeys().filter((entry) => entry.id !== id));
+      window.shopData?.deleteKey?.(id).catch(() => {});
       if (key?.productId) syncProductStock(key.productId);
       renderKeys();
     }
@@ -226,6 +235,7 @@
       const ids = new Set(keysToDelete.map((entry) => entry.id));
       const productIds = new Set(keysToDelete.map((entry) => entry.productId).filter(Boolean));
       saveKeys(getKeys().filter((entry) => !ids.has(entry.id)));
+      keysToDelete.forEach((entry) => window.shopData?.deleteKey?.(entry.id).catch(() => {}));
       productIds.forEach(syncProductStock);
       activeTypeFilter = "all";
       renderTypeFilter();
@@ -293,12 +303,27 @@
       `).join("");
     }
 
-    function renderPage() {
+    async function loadSharedData() {
+      try {
+        if (window.shopData?.loadProducts) {
+          const products = await window.shopData.loadProducts(defaultProducts);
+          localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+        }
+        if (window.shopData?.loadKeys) {
+          const keys = await window.shopData.loadKeys();
+          localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+        }
+      } catch {
+      }
+    }
+
+    async function renderPage() {
       const allowed = isAdmin();
       document.querySelector("#accessBadge").textContent = allowed ? "admin active" : "access blocked";
       document.querySelector("#accessDenied").hidden = allowed;
       document.querySelector("#keysPanel").hidden = !allowed;
       if (!allowed) return;
+      await loadSharedData();
       renderProductOptions();
       renderTypeFilter();
       renderKeys();
@@ -319,6 +344,7 @@
     renderPage();
     window.addEventListener("gmail-auth-change", renderPage);
     window.addEventListener("storage", renderPage);
+    window.addEventListener("shop-data-ready", renderPage);
   </script>
 </body>
 </html>

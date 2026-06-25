@@ -62,6 +62,11 @@
   </main>
 
   <script type="module" src="firebase-auth.js"></script>
+  <script type="module">
+    import * as shopData from "./shop-data.js";
+    window.shopData = shopData;
+    window.dispatchEvent(new Event("shop-data-ready"));
+  </script>
   <script src="auth-fallback.js"></script>
   <script>
     const STORE_ORDERS_KEY = "lusive-store-orders";
@@ -90,6 +95,7 @@
 
     function saveOrders(orders) {
       localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+      window.shopData?.saveOrders?.(orders).catch(() => {});
     }
 
     function escapeHtml(value) {
@@ -137,6 +143,7 @@
 
     function saveProducts(products) {
       localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+      window.shopData?.saveProducts?.(products).catch(() => {});
     }
 
     function stockCount(stock) {
@@ -159,6 +166,7 @@
 
     function saveKeys(keys) {
       localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+      window.shopData?.saveKeys?.(keys).catch(() => {});
     }
 
     function normalizeKeyType(type) {
@@ -298,6 +306,7 @@
         return reviewedOrder;
       }));
       if (reviewedOrder) notifyOrderReview(reviewedOrder, status, rejectReason);
+      if (reviewedOrder) window.shopData?.saveOrder?.(reviewedOrder).catch(() => {});
       renderOrders();
     }
 
@@ -332,6 +341,7 @@
         return reviewedOrder;
       }));
       if (reviewedOrder) notifyOrderReview(reviewedOrder, "accepted", "Script delivery instructions added");
+      if (reviewedOrder) window.shopData?.saveOrder?.(reviewedOrder).catch(() => {});
       renderOrders();
     }
 
@@ -366,13 +376,17 @@
         return reviewedOrder;
       }));
       if (reviewedOrder) notifyOrderReview(reviewedOrder, "accepted", "Account delivered / credentials added");
+      if (reviewedOrder) window.shopData?.saveOrder?.(reviewedOrder).catch(() => {});
       renderOrders();
     }
 
     function deleteOrder(id) {
       if (!isAdmin()) return;
       if (!confirm("Delete this order?")) return;
-      saveOrders(getOrders().map((order) => order.id === id ? { ...order, hiddenFromAdmin: true } : order));
+      const nextOrders = getOrders().map((order) => order.id === id ? { ...order, hiddenFromAdmin: true } : order);
+      saveOrders(nextOrders);
+      const hiddenOrder = nextOrders.find((order) => order.id === id);
+      if (hiddenOrder) window.shopData?.saveOrder?.(hiddenOrder).catch(() => {});
       renderOrders();
     }
 
@@ -380,6 +394,7 @@
       if (!isAdmin()) return;
       if (!confirm("Delete every saved order from this browser?")) return;
       localStorage.removeItem(STORE_ORDERS_KEY);
+      window.shopData?.clearOrders?.().catch(() => {});
       orderSearch = "";
       document.querySelector("#adminOrderSearchInput").value = "";
       renderOrders();
@@ -460,12 +475,32 @@
       }).join("");
     }
 
-    function renderPage() {
+    async function loadSharedOrders() {
+      try {
+        if (!window.shopData?.loadOrders) return;
+        const orders = await window.shopData.loadOrders();
+        localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+        if (window.shopData?.loadKeys) {
+          const keys = await window.shopData.loadKeys();
+          localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+        }
+        if (window.shopData?.loadProducts) {
+          const products = await window.shopData.loadProducts(getProducts());
+          localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+        }
+      } catch {
+      }
+    }
+
+    async function renderPage() {
       const allowed = isAdmin();
       document.querySelector("#accessBadge").textContent = allowed ? "admin active" : "access blocked";
       document.querySelector("#accessDenied").hidden = allowed;
       document.querySelector("#adminOrdersPanel").hidden = !allowed;
-      if (allowed) renderOrders();
+      if (allowed) {
+        await loadSharedOrders();
+        renderOrders();
+      }
     }
 
     document.querySelector("#adminOrderSearchInput").addEventListener("input", (event) => {
@@ -484,6 +519,7 @@
     renderPage();
     window.addEventListener("gmail-auth-change", renderPage);
     window.addEventListener("storage", renderPage);
+    window.addEventListener("shop-data-ready", renderPage);
   </script>
 </body>
 </html>

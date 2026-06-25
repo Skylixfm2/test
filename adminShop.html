@@ -117,6 +117,11 @@
   </main>
 
   <script type="module" src="firebase-auth.js"></script>
+  <script type="module">
+    import * as shopData from "./shop-data.js";
+    window.shopData = shopData;
+    window.dispatchEvent(new Event("shop-data-ready"));
+  </script>
   <script src="auth-fallback.js"></script>
   <script>
     const STORE_PRODUCTS_KEY = "lusive-store-products";
@@ -199,6 +204,7 @@
 
     function saveProducts(products) {
       localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+      window.shopData?.saveProducts?.(products).catch(() => {});
     }
 
     function escapeHtml(value) {
@@ -262,6 +268,9 @@
       });
       saveProducts(products);
       const after = products.find((product) => product.id === id);
+      if (after) {
+        window.shopData?.saveProduct?.(after).catch(() => {});
+      }
       const oldStock = stockCount(before?.stock);
       const newStock = stockCount(after?.stock);
       if (after && newStock > oldStock) {
@@ -310,6 +319,7 @@
         allowMultiple: document.querySelector("#newProductMultiple").checked
       };
       saveProducts([product, ...getProducts()]);
+      window.shopData?.saveProduct?.(product).catch(() => {});
       notifyNewProduct(product);
       document.querySelector("#newProductName").value = "";
       document.querySelector("#newProductImage").value = "";
@@ -324,6 +334,7 @@
       deleted.add(id);
       saveDeletedProductIds(deleted);
       saveProducts(getProducts().filter((product) => product.id !== id));
+      window.shopData?.deleteProduct?.(id).catch(() => {});
       renderAdminShop();
     }
 
@@ -379,12 +390,22 @@
       `).join("");
     }
 
-    function renderAdminShop() {
+    async function loadSharedProducts() {
+      try {
+        if (!window.shopData?.loadProducts) return;
+        const products = await window.shopData.loadProducts(defaultProducts);
+        localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+      } catch {
+      }
+    }
+
+    async function renderAdminShop() {
       const allowed = isAdmin();
       document.querySelector("#accessBadge").textContent = allowed ? "admin active" : "access blocked";
       document.querySelector("#accessDenied").hidden = allowed;
       document.querySelector("#adminShopPanel").hidden = !allowed;
       if (!allowed) return;
+      await loadSharedProducts();
       renderProducts();
     }
 
