@@ -18,6 +18,11 @@
     .store-top { display: grid; gap: 22px; align-items: start; margin: 26px 0; }
     .store-hero { display: grid; gap: 12px; margin: 0; }
     .store-hero h1 { font-size: clamp(2.4rem, 5vw, 4.7rem); }
+    .store-heading { display: flex; justify-content: space-between; gap: 18px; align-items: start; flex-wrap: wrap; }
+    .shop-stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 12px; }
+    .shop-stat { min-width: 132px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(65, 149, 217, 0.28); background: rgba(9, 17, 39, 0.72); text-align: right; }
+    .shop-stat strong { display: block; color: #61f0ff; font-size: 1.1rem; line-height: 1; }
+    .shop-stat span { display: block; margin-top: 5px; color: #aab5c8; font-size: 0.76rem; font-weight: 900; text-transform: uppercase; }
 
     .store-layout { display: grid; gap: 24px; align-items: start; }
     .shop-type-nav { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
@@ -118,7 +123,19 @@
 
     <section class="store-top">
       <section class="hero store-hero">
-        <h1>Shop</h1>
+        <div class="store-heading">
+          <h1>Shop</h1>
+          <div class="shop-stats" aria-label="Shop statistics">
+            <div class="shop-stat">
+              <strong id="averageReview">-/10</strong>
+              <span>Average review</span>
+            </div>
+            <div class="shop-stat">
+              <strong id="totalSales">0</strong>
+              <span>Total sales</span>
+            </div>
+          </div>
+        </div>
         <div class="shop-type-nav" aria-label="Shop categories">
           <button class="shop-type-button active" type="button" data-shop-filter="all">All</button>
           <button class="shop-type-button" type="button" data-shop-filter="key">Keys</button>
@@ -465,6 +482,19 @@
       localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
     }
 
+    function renderShopStats() {
+      const orders = getOrders();
+      const acceptedOrders = orders.filter((order) => order.status === "accepted");
+      const ratings = orders
+        .map((order) => Number(order.reviewRating))
+        .filter((rating) => Number.isFinite(rating) && rating >= 0 && rating <= 10);
+      const average = ratings.length
+        ? (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1)
+        : "-";
+      document.querySelector("#averageReview").textContent = `${average}/10`;
+      document.querySelector("#totalSales").textContent = String(acceptedOrders.length);
+    }
+
     function createUniqueOrderId() {
       const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
       const existing = new Set(savedOrderIds());
@@ -701,6 +731,8 @@
       });
     });
     renderProducts();
+    renderShopStats();
+    window.addEventListener("storage", renderShopStats);
   </script>
 </body>
 </html>
