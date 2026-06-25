@@ -3,8 +3,12 @@ import {
   getAuth,
   onAuthStateChanged,
   GoogleAuthProvider,
+  createUserWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  reload,
   getRedirectResult,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
@@ -39,6 +43,10 @@ function normalizeGmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
+function normalizePseudo(pseudo) {
+  return String(pseudo || "").trim().toLowerCase();
+}
+
 function isValidGmail(email) {
   return /^[^\s@]+@gmail\.com$/i.test(String(email || "").trim());
 }
@@ -64,21 +72,64 @@ function saveLocalAccounts(accounts) {
   localStorage.setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
 }
 
+function isPseudoTaken(accounts, pseudo, currentEmail) {
+  const nextPseudo = normalizePseudo(pseudo);
+  const nextEmail = normalizeGmail(currentEmail);
+  return Object.entries(accounts).some(([email, account]) => {
+    return normalizeGmail(email) !== nextEmail && normalizePseudo(account?.pseudo) === nextPseudo;
+  });
+}
+
 async function hashPassword(password) {
   const bytes = new TextEncoder().encode(String(password || ""));
   const hash = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+async function signInAndRequireVerifiedEmail(email, password) {
+  const normalizedEmail = normalizeGmail(email);
+  let credential;
+
+  try {
+    credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+  } catch (error) {
+    if (error.code !== "auth/user-not-found" && error.code !== "auth/invalid-credential") {
+      if (error.code === "auth/operation-not-allowed") {
+        throw new Error("Enable Email/Password in Firebase Authentication first.");
+      }
+      throw error;
+    }
+    credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+  }
+
+  await reload(credential.user);
+  if (!credential.user.emailVerified) {
+    await sendEmailVerification(credential.user).catch(() => {});
+    localStorage.setItem(EMAIL_VERIFIED_KEY, "false");
+    throw new Error("Verification email sent. Open the Firebase link in your mailbox, then sign in again.");
+  }
+
+  return credential.user;
+}
+
 async function confirmLocalAccount(email, pseudo, passwordHash) {
   const normalizedEmail = normalizeGmail(email);
   const accounts = getLocalAccounts();
   const existing = accounts[normalizedEmail];
+  const nextPseudo = String(pseudo || existing?.pseudo || normalizedEmail.split("@")[0]).trim();
+
   if (existing && existing.passwordHash !== passwordHash) {
     throw new Error("Wrong password for this account.");
   }
+  if (!nextPseudo || nextPseudo.length < 2) {
+    throw new Error("Choose a username.");
+  }
+  if (isPseudoTaken(accounts, nextPseudo, normalizedEmail)) {
+    throw new Error("This username is already taken.");
+  }
+
   accounts[normalizedEmail] = {
-    pseudo: pseudo || existing?.pseudo || normalizedEmail.split("@")[0],
+    pseudo: nextPseudo,
     passwordHash,
     createdAt: existing?.createdAt || new Date().toISOString()
   };
@@ -145,13 +196,22 @@ async function signInWithSiteAccount(pseudo, email, password) {
   const passwordHash = await hashPassword(password);
   const accounts = getLocalAccounts();
   const existing = accounts[normalizedEmail];
+  const nextPseudo = String(pseudo || existing?.pseudo || normalizedEmail.split("@")[0]).trim();
 
   if (existing && existing.passwordHash !== passwordHash) {
     throw new Error("Wrong password for this account.");
   }
+  if (!nextPseudo || nextPseudo.length < 2) {
+    throw new Error("Choose a username.");
+  }
+  if (isPseudoTaken(accounts, nextPseudo, normalizedEmail)) {
+    throw new Error("This username is already taken.");
+  }
+
+  const firebaseUser = await signInAndRequireVerifiedEmail(normalizedEmail, password);
 
   accounts[normalizedEmail] = {
-    pseudo: pseudo || existing?.pseudo || normalizedEmail.split("@")[0],
+    pseudo: nextPseudo,
     passwordHash,
     createdAt: existing?.createdAt || new Date().toISOString()
   };
@@ -161,7 +221,7 @@ async function signInWithSiteAccount(pseudo, email, password) {
   localStorage.setItem(CUSTOMER_PSEUDO_KEY, accounts[normalizedEmail].pseudo);
   localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
   localStorage.setItem(PASSWORD_OK_KEY, "true");
-  localStorage.setItem(FIREBASE_UID_KEY, `local-${normalizedEmail}`);
+  localStorage.setItem(FIREBASE_UID_KEY, firebaseUser.uid);
   localStorage.removeItem(PENDING_ACCOUNT_KEY);
   dispatchAuthChange();
 }
