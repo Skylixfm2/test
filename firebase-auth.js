@@ -119,6 +119,16 @@ async function signInWithGoogle(pseudo, password) {
   const passwordHash = await hashPassword(password);
   localStorage.setItem(PENDING_ACCOUNT_KEY, JSON.stringify({ pseudo, passwordHash }));
   localStorage.setItem(CUSTOMER_PSEUDO_KEY, pseudo);
+  if (auth.currentUser?.email) {
+    const email = normalizeGmail(auth.currentUser.email);
+    await confirmLocalAccount(email, pseudo, passwordHash);
+    localStorage.setItem(CUSTOMER_EMAIL_KEY, email);
+    localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
+    localStorage.setItem(FIREBASE_UID_KEY, auth.currentUser.uid);
+    localStorage.removeItem(PENDING_ACCOUNT_KEY);
+    dispatchAuthChange();
+    return { user: auth.currentUser };
+  }
   try {
     return await signInWithPopup(auth, googleProvider);
   } catch (error) {
@@ -205,12 +215,14 @@ function renderGmailAuth() {
         const result = await signInWithGoogle(nextPseudo, passwordInput.value);
         if (result?.user?.email) {
           const nextEmail = normalizeGmail(result.user.email);
-          const pending = JSON.parse(localStorage.getItem(PENDING_ACCOUNT_KEY) || "{}");
-          await confirmLocalAccount(nextEmail, pending.pseudo || nextPseudo, pending.passwordHash);
-          localStorage.setItem(CUSTOMER_EMAIL_KEY, nextEmail);
-          localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
-          localStorage.setItem(FIREBASE_UID_KEY, result.user.uid);
-          localStorage.removeItem(PENDING_ACCOUNT_KEY);
+          if (localStorage.getItem(PASSWORD_OK_KEY) !== "true") {
+            const pending = JSON.parse(localStorage.getItem(PENDING_ACCOUNT_KEY) || "{}");
+            await confirmLocalAccount(nextEmail, pending.pseudo || nextPseudo, pending.passwordHash);
+            localStorage.setItem(CUSTOMER_EMAIL_KEY, nextEmail);
+            localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
+            localStorage.setItem(FIREBASE_UID_KEY, result.user.uid);
+            localStorage.removeItem(PENDING_ACCOUNT_KEY);
+          }
           status.textContent = "Account connected.";
           renderGmailAuth();
         }
