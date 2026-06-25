@@ -20,12 +20,18 @@ const firebaseConfig = {
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const deprecatedProductIds = new Set([
+  "vip",
+  "premium",
+  "ultimate",
+  "starter",
   "codes",
   "daily-key",
   "weekly-key",
   "monthly-key",
   "lifetime-key",
-  "bundle-keys"
+  "bundle-keys",
+  "custom-script",
+  "source-pack"
 ]);
 
 function clean(value) {
