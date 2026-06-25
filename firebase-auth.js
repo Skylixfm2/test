@@ -140,6 +140,32 @@ async function signInWithGoogle(pseudo, password) {
   }
 }
 
+async function signInWithSiteAccount(pseudo, email, password) {
+  const normalizedEmail = normalizeGmail(email);
+  const passwordHash = await hashPassword(password);
+  const accounts = getLocalAccounts();
+  const existing = accounts[normalizedEmail];
+
+  if (existing && existing.passwordHash !== passwordHash) {
+    throw new Error("Wrong password for this account.");
+  }
+
+  accounts[normalizedEmail] = {
+    pseudo: pseudo || existing?.pseudo || normalizedEmail.split("@")[0],
+    passwordHash,
+    createdAt: existing?.createdAt || new Date().toISOString()
+  };
+  saveLocalAccounts(accounts);
+
+  localStorage.setItem(CUSTOMER_EMAIL_KEY, normalizedEmail);
+  localStorage.setItem(CUSTOMER_PSEUDO_KEY, accounts[normalizedEmail].pseudo);
+  localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
+  localStorage.setItem(PASSWORD_OK_KEY, "true");
+  localStorage.setItem(FIREBASE_UID_KEY, `local-${normalizedEmail}`);
+  localStorage.removeItem(PENDING_ACCOUNT_KEY);
+  dispatchAuthChange();
+}
+
 function clearCustomerEmail() {
   localStorage.removeItem(CUSTOMER_EMAIL_KEY);
   localStorage.removeItem(CUSTOMER_PSEUDO_KEY);
@@ -181,13 +207,13 @@ function renderGmailAuth() {
     container.innerHTML = `
       <div class="gmail-auth-copy">
         <strong>Create / sign in</strong>
-        <span>Use a username, password, and your Google account.</span>
+        <span>Create a site account with your email and password.</span>
       </div>
       <form class="gmail-auth-form">
         <input class="gmail-pseudo-input" type="text" value="${pseudo}" placeholder="Username" autocomplete="nickname" maxlength="32">
         <input class="gmail-password-input" type="password" placeholder="Password" autocomplete="current-password" minlength="6">
-        <input class="gmail-email-input" type="email" value="${email}" placeholder="Google account" autocomplete="email" disabled>
-        <button class="gmail-send-email" type="button">Sign in with Google</button>
+        <input class="gmail-email-input" type="email" value="${email}" placeholder="Email" autocomplete="email">
+        <button class="gmail-send-email" type="button">Create / sign in</button>
         <div class="gmail-auth-codes"></div>
         <div class="gmail-auth-error"></div>
       </form>
@@ -196,6 +222,7 @@ function renderGmailAuth() {
     const form = container.querySelector(".gmail-auth-form");
     const pseudoInput = container.querySelector(".gmail-pseudo-input");
     const passwordInput = container.querySelector(".gmail-password-input");
+    const emailInput = container.querySelector(".gmail-email-input");
     const status = container.querySelector(".gmail-auth-codes");
     const error = container.querySelector(".gmail-auth-error");
 
@@ -203,8 +230,13 @@ function renderGmailAuth() {
       error.textContent = "";
       status.textContent = "";
       const nextPseudo = pseudoInput.value.trim();
+      const nextEmail = normalizeGmail(emailInput.value);
       if (nextPseudo.length < 2) {
         error.textContent = "Choose a username.";
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(nextEmail)) {
+        error.textContent = "Enter a valid email.";
         return;
       }
       if (passwordInput.value.length < 6) {
@@ -212,22 +244,10 @@ function renderGmailAuth() {
         return;
       }
       try {
-        const result = await signInWithGoogle(nextPseudo, passwordInput.value);
-        if (result?.user?.email) {
-          const nextEmail = normalizeGmail(result.user.email);
-          if (localStorage.getItem(PASSWORD_OK_KEY) !== "true") {
-            const pending = JSON.parse(localStorage.getItem(PENDING_ACCOUNT_KEY) || "{}");
-            await confirmLocalAccount(nextEmail, pending.pseudo || nextPseudo, pending.passwordHash);
-            localStorage.setItem(CUSTOMER_EMAIL_KEY, nextEmail);
-            localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
-            localStorage.setItem(FIREBASE_UID_KEY, result.user.uid);
-            localStorage.removeItem(PENDING_ACCOUNT_KEY);
-          }
-          status.textContent = "Account connected.";
-          renderGmailAuth();
-        }
+        await signInWithSiteAccount(nextPseudo, nextEmail, passwordInput.value);
+        status.textContent = "Account connected.";
+        renderGmailAuth();
       } catch (err) {
-        signOut(auth).catch(() => {});
         error.textContent = `Sign in error: ${err.code || err.message}`;
       }
     });
@@ -256,6 +276,11 @@ window.gmailAuth = {
 renderGmailAuth();
 getRedirectResult(auth).catch((error) => console.warn("Firebase redirect error", error));
 onAuthStateChanged(auth, (user) => {
+  if (String(localStorage.getItem(FIREBASE_UID_KEY) || "").startsWith("local-")) {
+    renderGmailAuth();
+    dispatchAuthChange();
+    return;
+  }
   if (user?.email) {
     const email = normalizeGmail(user.email);
     const pending = JSON.parse(localStorage.getItem(PENDING_ACCOUNT_KEY) || "null");
