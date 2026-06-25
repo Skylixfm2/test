@@ -277,6 +277,7 @@ function renderGmailAuth() {
         <input class="gmail-password-input" type="password" placeholder="Password" autocomplete="current-password" minlength="6">
         <input class="gmail-email-input" type="email" value="${email}" placeholder="Email" autocomplete="email">
         <button class="gmail-send-email" type="button">Create / sign in</button>
+        <button class="gmail-google-login ghost-button" type="button">Use Google</button>
         <div class="gmail-auth-codes"></div>
         <div class="gmail-auth-error"></div>
       </form>
@@ -290,6 +291,7 @@ function renderGmailAuth() {
     const error = container.querySelector(".gmail-auth-error");
 
     const submitButton = container.querySelector(".gmail-send-email");
+    const googleButton = container.querySelector(".gmail-google-login");
 
     submitButton.addEventListener("click", async () => {
       error.textContent = "";
@@ -322,6 +324,30 @@ function renderGmailAuth() {
         }
       } finally {
         submitButton.disabled = false;
+      }
+    });
+
+    googleButton.addEventListener("click", async () => {
+      error.textContent = "";
+      status.textContent = "";
+      const nextPseudo = pseudoInput.value.trim();
+      if (nextPseudo.length < 2) {
+        error.textContent = "Choose a username.";
+        return;
+      }
+      if (passwordInput.value.length < 6) {
+        error.textContent = "Choose a password with at least 6 characters.";
+        return;
+      }
+      try {
+        googleButton.disabled = true;
+        status.textContent = "Opening Google sign in...";
+        await signInWithGoogle(nextPseudo, passwordInput.value);
+        status.textContent = "Google account checked. Finishing sign in...";
+      } catch (err) {
+        error.textContent = `Google sign in error: ${err.code || err.message}`;
+      } finally {
+        googleButton.disabled = false;
       }
     });
 
