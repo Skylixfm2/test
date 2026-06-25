@@ -393,7 +393,10 @@
     async function loadSharedProducts() {
       try {
         if (!window.shopData?.loadProducts) return;
-        const products = await window.shopData.loadProducts(defaultProducts);
+        const localProducts = getProducts();
+        const products = window.shopData.seedProducts
+          ? await window.shopData.seedProducts(localProducts.length ? localProducts : defaultProducts)
+          : await window.shopData.loadProducts(defaultProducts);
         localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
       } catch {
       }

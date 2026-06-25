@@ -20,6 +20,7 @@
     .status-accepted { background: rgba(74, 255, 173, 0.14); color: #4affa8; }
     .status-rejected { background: rgba(255, 95, 95, 0.16); color: #ff7777; }
     .order-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .delivery-note { white-space: pre-wrap; overflow-wrap: anywhere; }
     .empty-orders { padding: 22px; color: #98a6ba; }
     .mail-login { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin: 0 0 18px; padding: 16px; border-radius: 12px; background: rgba(9, 17, 39, 0.88); border: 1px solid rgba(0, 178, 255, 0.22); flex-wrap: wrap; }
     .mail-login strong { display: block; color: #ffffff; }
@@ -35,6 +36,7 @@
 <body>
   <main class="app-shell">
     <nav class="top-nav">
+      <a class="page-link discord-link" href="https://discord.gg/CGWWNs9c5S" target="_blank" rel="noopener">Discord</a>
       <a class="page-link" href="app.html">Workspace</a>
       <a class="page-link" href="store.html">Shop</a>
       <a class="page-link active" href="orders.html">My Orders</a>
@@ -46,7 +48,7 @@
 
     <section class="orders-head">
       <div>
-        <p class="eyebrow">Commandes boutique</p>
+        <p class="eyebrow">Shop orders</p>
         <h1>My Orders</h1>
       </div>
       <span id="ordersBadge" class="history-pill">0 orders</span>
@@ -58,6 +60,11 @@
   </main>
 
   <script type="module" src="firebase-auth.js"></script>
+  <script type="module">
+    import * as shopData from "./shop-data.js";
+    window.shopData = shopData;
+    window.dispatchEvent(new Event("shop-data-ready"));
+  </script>
   <script src="auth-fallback.js"></script>
   <script>
     const STORE_ORDERS_KEY = "lusive-store-orders";
@@ -99,10 +106,29 @@
 
     function saveOrders(orders) {
       localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+      window.shopData?.saveOrders?.(orders).catch(() => {});
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     function statusClass(status) {
       return status === "accepted" ? "status-accepted" : status === "rejected" ? "status-rejected" : "status-pending";
+    }
+
+    async function loadSharedOrders() {
+      try {
+        if (!window.shopData?.loadOrders) return;
+        const orders = await window.shopData.loadOrders();
+        localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+      } catch {
+      }
     }
 
     function renderOrders() {
@@ -112,12 +138,12 @@
       const grid = document.querySelector("#ordersGrid");
 
       if (!email) {
-        grid.innerHTML = `<section class="panel empty-orders">Connecte-toi avec ton Gmail pour voir tes commandes.</section>`;
+        grid.innerHTML = `<section class="panel empty-orders">Sign in with Gmail to view your orders.</section>`;
         return;
       }
 
       if (!orders.length) {
-        grid.innerHTML = `<section class="panel empty-orders">Aucune commande pour ${email}.</section>`;
+        grid.innerHTML = `<section class="panel empty-orders">No orders for ${email}.</section>`;
         return;
       }
 
@@ -125,28 +151,31 @@
         <article class="panel order-card">
           <div class="order-top">
             <div>
-              <strong>Commande</strong>
+              <strong>Order</strong>
               <div class="order-id-text">${order.id}</div>
             </div>
             <span class="status-pill ${statusClass(order.status)}">${order.status || "pending"}</span>
           </div>
           <div class="order-meta">
-            <div><span>Pseudo compte</span>${order.customerPseudo || "-"}</div>
-            <div><span>Email compte</span>${order.customerEmail || "-"}</div>
-            <div><span>Email commande</span>${order.contactEmail || "-"}</div>
+            <div><span>Account username</span>${order.customerPseudo || "-"}</div>
+            <div><span>Account email</span>${order.customerEmail || "-"}</div>
+            <div><span>Order email</span>${order.contactEmail || "-"}</div>
             <div><span>Mail PayPal</span>${order.paypalSenderEmail || "-"}</div>
             <div><span>IBAN</span>${order.payerIban || "-"}</div>
             <div><span>Total</span>${order.totalLabel || money.format(Number(order.total || 0))}</div>
-            <div><span>Paiement</span>${order.provider || "-"}</div>
+            <div><span>Payment</span>${order.provider || "-"}</div>
           </div>
           <div class="order-meta">
             <div><span>Date</span>${order.createdAt ? new Date(order.createdAt).toLocaleString("fr-FR") : "-"}</div>
-            <div><span>Pseudo Roblox</span>${order.username || "-"}</div>
-            <div><span>Produits</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
-            <div><span>Keys</span>${order.status === "accepted" ? (order.assignedKeys || []).join(", ") || "-" : "apres acceptation"}</div>
-            <div><span>Preuve transaction</span>${order.transactionProofName || "-"}</div>
-            <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
-            <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>
+            <div><span>Roblox username</span>${order.username || "-"}</div>
+            <div><span>Products</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
+            <div><span>Keys</span>${order.status === "accepted" ? (order.assignedKeys || []).join(", ") || "-" : "after approval"}</div>
+            <div><span>Account</span><div class="delivery-note">${order.status === "accepted" ? "Available via Claim" : "after approval"}</div></div>
+            <div><span>Script</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.scriptDelivery || [order.scriptLocation, order.scriptClass].filter(Boolean).join(" / ") || "Available via Claim") : "after approval"}</div></div>
+            <div><span>Rejection reason</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
+            <div><span>Transaction proof</span>${order.transactionProofName || "-"}</div>
+            <div><span>Gamepass proof</span>${order.gamepassProofName || "-"}</div>
+            <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "pending"}</div>
           </div>
           ${order.status === "accepted" ? `
             <div class="order-actions">
@@ -158,7 +187,13 @@
     }
 
     window.addEventListener("gmail-auth-change", renderOrders);
-    renderOrders();
+    async function initOrders() {
+      await loadSharedOrders();
+      renderOrders();
+    }
+
+    initOrders();
+    window.addEventListener("shop-data-ready", initOrders);
   </script>
 </body>
 </html>

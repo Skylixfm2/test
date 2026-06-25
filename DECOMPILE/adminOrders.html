@@ -18,6 +18,7 @@
     .order-meta div { padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.04); color: #dce5ff; }
     .order-meta span { display: block; color: #98a6ba; font-size: 0.78rem; font-weight: 900; text-transform: uppercase; }
     .order-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .delivery-note { white-space: pre-wrap; overflow-wrap: anywhere; }
     .status-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 6px 10px; border-radius: 999px; font-weight: 900; }
     .status-pending { background: rgba(255, 209, 47, 0.16); color: #ffd12f; }
     .status-accepted { background: rgba(74, 255, 173, 0.14); color: #4affa8; }
@@ -30,6 +31,7 @@
 <body>
   <main class="app-shell">
     <nav class="top-nav">
+      <a class="page-link discord-link" href="https://discord.gg/CGWWNs9c5S" target="_blank" rel="noopener">Discord</a>
       <a class="page-link" href="store.html">Shop</a>
       <a class="page-link" href="orders.html">My Orders</a>
       <a class="page-link active" href="adminOrders.html">Admin Orders</a>
@@ -41,24 +43,30 @@
 
     <section class="admin-orders-head">
       <div>
-        <p class="eyebrow">Validation des commandes</p>
+        <p class="eyebrow">Order validation</p>
         <h1>Admin Orders</h1>
       </div>
-      <span id="accessBadge" class="history-pill">verification</span>
+      <span id="accessBadge" class="history-pill">checking</span>
     </section>
 
-    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis. Connecte-toi avec le Gmail admin.</section>
+    <section id="accessDenied" class="panel access-denied" hidden>Admin access required. Sign in with the admin Gmail.</section>
 
     <section id="adminOrdersPanel" hidden>
       <div class="admin-order-search">
-        <input id="adminOrderSearchInput" class="account-input" type="search" placeholder="Chercher avec un Commande ID">
+        <input id="adminOrderSearchInput" class="account-input" type="search" placeholder="Search by Order ID">
         <button id="adminOrderSearchReset" class="ghost-button" type="button">Reset</button>
+        <button id="adminOrderClearAll" class="ghost-button" type="button">Clear all orders</button>
       </div>
       <section id="ordersBoard" class="orders-board"></section>
     </section>
   </main>
 
   <script type="module" src="firebase-auth.js"></script>
+  <script type="module">
+    import * as shopData from "./shop-data.js";
+    window.shopData = shopData;
+    window.dispatchEvent(new Event("shop-data-ready"));
+  </script>
   <script src="auth-fallback.js"></script>
   <script>
     const STORE_ORDERS_KEY = "lusive-store-orders";
@@ -67,6 +75,7 @@
     const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const EMAIL_VERIFIED_KEY = "lusive-email-verified";
     const ADMIN_EMAIL = "solarydigix@gmail.com";
+    const ADMIN_ORDER_WEBHOOK_ENDPOINT = "https://skylixfm-shop.solarydigix.workers.dev/admin-order";
     const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
     let orderSearch = "";
 
@@ -86,6 +95,41 @@
 
     function saveOrders(orders) {
       localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+      window.shopData?.saveOrders?.(orders).catch(() => {});
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function primaryProduct(order) {
+      return (order.products || [])[0] || {};
+    }
+
+    function isAccountOrder(order) {
+      return primaryProduct(order).fulfillment === "account";
+    }
+
+    function isScriptOrder(order) {
+      return primaryProduct(order).fulfillment === "script";
+    }
+
+    function isKeyOrder(order) {
+      const product = primaryProduct(order);
+      return product.fulfillment === "key" || product.id === "codes";
+    }
+
+    function notifyOrderReview(order, status, reason = "") {
+      fetch(ADMIN_ORDER_WEBHOOK_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order, status, reason })
+      }).catch(() => {});
     }
 
     function getProducts() {
@@ -99,6 +143,7 @@
 
     function saveProducts(products) {
       localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+      window.shopData?.saveProducts?.(products).catch(() => {});
     }
 
     function stockCount(stock) {
@@ -121,6 +166,7 @@
 
     function saveKeys(keys) {
       localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+      window.shopData?.saveKeys?.(keys).catch(() => {});
     }
 
     function normalizeKeyType(type) {
@@ -151,7 +197,7 @@
       const keys = getKeys();
       const available = keys.filter((entry) => entry.status === "available" && keyEntryType(entry) === expectedType).slice(0, quantity);
       if (available.length < quantity) {
-        alert(`Pas assez de keys ${expectedType} disponibles. Keys trouvees: ${available.length}/${quantity}.`);
+        alert(`Not enough ${expectedType} keys available. Keys found: ${available.length}/${quantity}.`);
         return null;
       }
 
@@ -199,26 +245,167 @@
 
     function setOrderStatus(id, status) {
       if (!isAdmin()) return;
+      let deliveryLogin = "";
+      let deliveryPassword = "";
+      let scriptLocation = "";
+      let scriptClass = "";
+      let rejectReason = "";
+
+      const currentOrder = getOrders().find((order) => order.id === id);
+      if (!currentOrder) return;
+
+      if (status === "accepted" && isAccountOrder(currentOrder)) {
+        deliveryLogin = prompt("Account email / username to deliver:", currentOrder.deliveryLogin || "");
+        if (deliveryLogin === null || !deliveryLogin.trim()) {
+          alert("Enter the account email/username before accepting.");
+          return;
+        }
+        deliveryPassword = prompt("Account password to deliver:", currentOrder.deliveryPassword || "");
+        if (deliveryPassword === null || !deliveryPassword.trim()) {
+          alert("Enter the password before accepting.");
+          return;
+        }
+      }
+
+      if (status === "accepted" && isScriptOrder(currentOrder)) {
+        const product = primaryProduct(currentOrder);
+        scriptLocation = prompt("Where should the script be placed? Optional.", currentOrder.scriptLocation || product.scriptLocation || "");
+        if (scriptLocation === null) return;
+        scriptClass = prompt("What script class should be used? Optional.", currentOrder.scriptClass || product.scriptClass || "");
+        if (scriptClass === null) return;
+      }
+
+      if (status === "rejected") {
+        rejectReason = prompt("Rejection reason / issue to send to Discord:", currentOrder.rejectReason || "");
+        if (rejectReason === null) return;
+      }
+
+      let reviewedOrder = null;
       saveOrders(getOrders().map((order) => {
         if (order.id !== id) return order;
         const statusOrder = status === "rejected" ? restoreOrderStock(order) : order;
         const acceptedOrder = status === "accepted" ? consumeRestoredOrderStock(statusOrder) : statusOrder;
         const nextOrder = status === "accepted" ? assignKeysToOrder(acceptedOrder) : acceptedOrder;
         if (!nextOrder) return order;
-        return { ...nextOrder, status, reviewedAt: new Date().toISOString() };
+        reviewedOrder = {
+          ...nextOrder,
+          status,
+          deliveryLogin: deliveryLogin.trim() || nextOrder.deliveryLogin || "",
+          deliveryPassword: deliveryPassword.trim() || nextOrder.deliveryPassword || "",
+          deliveryAccounts: deliveryLogin.trim()
+            ? `Email/username: ${deliveryLogin.trim()}\nPassword: ${deliveryPassword.trim()}`
+            : nextOrder.deliveryAccounts || "",
+          scriptLocation: scriptLocation.trim() || nextOrder.scriptLocation || primaryProduct(nextOrder).scriptLocation || "",
+          scriptClass: scriptClass.trim() || nextOrder.scriptClass || primaryProduct(nextOrder).scriptClass || "",
+          scriptDelivery: scriptLocation.trim()
+            ? `Location: ${scriptLocation.trim()}\nScript class: ${scriptClass.trim()}`
+            : nextOrder.scriptDelivery || "",
+          rejectReason: rejectReason.trim() || nextOrder.rejectReason || "",
+          reviewedAt: new Date().toISOString()
+        };
+        return reviewedOrder;
       }));
+      if (reviewedOrder) notifyOrderReview(reviewedOrder, status, rejectReason);
+      if (reviewedOrder) window.shopData?.saveOrder?.(reviewedOrder).catch(() => {});
+      renderOrders();
+    }
+
+    function deliverScript(id) {
+      if (!isAdmin()) return;
+      const currentOrder = getOrders().find((order) => order.id === id);
+      if (!currentOrder) return;
+      const product = primaryProduct(currentOrder);
+
+      const scriptLocation = prompt("Where should the script be placed? Optional.", currentOrder.scriptLocation || product.scriptLocation || "");
+      if (scriptLocation === null) return;
+
+      const scriptClass = prompt("What script class should be used? Optional.", currentOrder.scriptClass || product.scriptClass || "");
+      if (scriptClass === null) return;
+
+      const scriptContent = prompt("Script code to deliver. Optional if already saved on the product.", currentOrder.scriptContent || product.scriptContent || "");
+      if (scriptContent === null) return;
+
+      let reviewedOrder = null;
+      saveOrders(getOrders().map((order) => {
+        if (order.id !== id) return order;
+        const acceptedOrder = consumeRestoredOrderStock(order);
+        reviewedOrder = {
+          ...acceptedOrder,
+          status: "accepted",
+          scriptLocation: scriptLocation.trim(),
+          scriptClass: scriptClass.trim(),
+          scriptContent: scriptContent.trim() || product.scriptContent || acceptedOrder.scriptContent || "",
+          scriptDelivery: [scriptLocation.trim(), scriptClass.trim()].filter(Boolean).join(" / ") || "Script delivered",
+          reviewedAt: new Date().toISOString()
+        };
+        return reviewedOrder;
+      }));
+      if (reviewedOrder) notifyOrderReview(reviewedOrder, "accepted", "Script delivery instructions added");
+      if (reviewedOrder) window.shopData?.saveOrder?.(reviewedOrder).catch(() => {});
+      renderOrders();
+    }
+
+    function deliverAccount(id) {
+      if (!isAdmin()) return;
+      const currentOrder = getOrders().find((order) => order.id === id);
+      if (!currentOrder) return;
+
+      const deliveryLogin = prompt("Account email / username to deliver:", currentOrder.deliveryLogin || "");
+      if (deliveryLogin === null || !deliveryLogin.trim()) {
+        alert("Enter the account email/username.");
+        return;
+      }
+
+      const deliveryPassword = prompt("Account password to deliver:", currentOrder.deliveryPassword || "");
+      if (deliveryPassword === null || !deliveryPassword.trim()) {
+        alert("Enter the password.");
+        return;
+      }
+
+      let reviewedOrder = null;
+      saveOrders(getOrders().map((order) => {
+        if (order.id !== id) return order;
+        reviewedOrder = {
+          ...order,
+          status: "accepted",
+          deliveryLogin: deliveryLogin.trim(),
+          deliveryPassword: deliveryPassword.trim(),
+          deliveryAccounts: `Email/username: ${deliveryLogin.trim()}\nPassword: ${deliveryPassword.trim()}`,
+          reviewedAt: new Date().toISOString()
+        };
+        return reviewedOrder;
+      }));
+      if (reviewedOrder) notifyOrderReview(reviewedOrder, "accepted", "Account delivered / credentials added");
+      if (reviewedOrder) window.shopData?.saveOrder?.(reviewedOrder).catch(() => {});
       renderOrders();
     }
 
     function deleteOrder(id) {
       if (!isAdmin()) return;
-      if (!confirm("Supprimer cette commande ?")) return;
-      saveOrders(getOrders().map((order) => order.id === id ? { ...order, hiddenFromAdmin: true } : order));
+      if (!confirm("Delete this order?")) return;
+      const nextOrders = getOrders().map((order) => order.id === id ? { ...order, hiddenFromAdmin: true } : order);
+      saveOrders(nextOrders);
+      const hiddenOrder = nextOrders.find((order) => order.id === id);
+      if (hiddenOrder) window.shopData?.saveOrder?.(hiddenOrder).catch(() => {});
+      renderOrders();
+    }
+
+    function clearAllOrders() {
+      if (!isAdmin()) return;
+      if (!confirm("Delete every saved order from this browser?")) return;
+      localStorage.removeItem(STORE_ORDERS_KEY);
+      window.shopData?.clearOrders?.().catch(() => {});
+      orderSearch = "";
+      document.querySelector("#adminOrderSearchInput").value = "";
       renderOrders();
     }
 
     function statusClass(status) {
       return status === "accepted" ? "status-accepted" : status === "rejected" ? "status-rejected" : "status-pending";
+    }
+
+    function orderType(order) {
+      return primaryProduct(order).fulfillment || "file";
     }
 
     function renderOrders() {
@@ -230,54 +417,90 @@
       const board = document.querySelector("#ordersBoard");
 
       if (!orders.length) {
-        board.innerHTML = `<section class="panel empty-orders">${orderSearch ? "Aucune commande avec cet ID." : "Aucune commande."}</section>`;
+        board.innerHTML = `<section class="panel empty-orders">${orderSearch ? "No order with this ID." : "No orders."}</section>`;
         return;
       }
 
-      board.innerHTML = orders.map((order) => `
+      board.innerHTML = orders.map((order) => {
+        const type = orderType(order);
+        const isAccount = type === "account";
+        const isScript = type === "script";
+        const canDeliverScript = isScript || isKeyOrder(order);
+        return `
         <article class="order-card">
           <div class="order-top">
             <div>
-              <strong>Commande</strong>
+              <strong>Order</strong>
               <div class="order-id">${order.id}</div>
             </div>
             <span class="status-pill ${statusClass(order.status)}">${order.status || "pending"}</span>
           </div>
           <div class="order-meta">
-            <div><span>Produit</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
+            <div><span>Product</span>${(order.products || []).map((product) => `${product.name} x${product.quantity || order.quantity || 1}`).join(", ") || "-"}</div>
             <div><span>Total</span>${order.totalLabel || money.format(Number(order.total || 0))}</div>
-            <div><span>Paiement</span>${order.provider || "-"}</div>
+            <div><span>Payment</span>${order.provider || "-"}</div>
             <div><span>Date</span>${order.createdAt ? new Date(order.createdAt).toLocaleString("fr-FR") : "-"}</div>
           </div>
           <div class="order-meta">
-            <div><span>Pseudo compte</span>${order.customerPseudo || "-"}</div>
-            <div><span>Email compte</span>${order.customerEmail || "-"}</div>
-            <div><span>Email commande</span>${order.contactEmail || "-"}</div>
-            <div><span>Mail PayPal</span>${order.paypalSenderEmail || "-"}</div>
-            <div><span>IBAN acheteur</span>${order.payerIban || "-"}</div>
-            <div><span>Pseudo Roblox</span>${order.username || "-"}</div>
-            <div><span>Preuve transaction</span>${order.transactionProofName || "-"}</div>
+            <div><span>Account username</span>${order.customerPseudo || "-"}</div>
+            <div><span>Account email</span>${order.customerEmail || "-"}</div>
+            <div><span>Order email</span>${order.contactEmail || "-"}</div>
+            <div><span>PayPal email</span>${order.paypalSenderEmail || "-"}</div>
+            <div><span>Buyer IBAN</span>${order.payerIban || "-"}</div>
+            <div><span>Roblox username</span>${order.username || "-"}</div>
+            <div><span>Transaction proof</span>${order.transactionProofName || "-"}</div>
           </div>
           <div class="order-meta">
-            <div><span>Preuve gamepass</span>${order.gamepassProofName || "-"}</div>
-            <div><span>Keys livrees</span>${(order.assignedKeys || []).join(", ") || "-"}</div>
-            <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "en attente"}</div>
+            <div><span>Gamepass proof</span>${order.gamepassProofName || "-"}</div>
+            <div><span>Delivered keys</span>${(order.assignedKeys || []).join(", ") || "-"}</div>
+            ${isAccount ? `
+              <div><span>Delivered account</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryLogin || order.deliveryAccounts || "-") : "after approval"}</div></div>
+              <div><span>Password</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.deliveryPassword || "-") : "after approval"}</div></div>
+            ` : ""}
+            ${canDeliverScript ? `
+              <div><span>Script delivery</span><div class="delivery-note">${order.status === "accepted" ? escapeHtml(order.scriptDelivery || [order.scriptLocation, order.scriptClass].filter(Boolean).join(" / ") || "-") : "after approval"}</div></div>
+            ` : ""}
+            <div><span>Rejection reason</span><div class="delivery-note">${order.status === "rejected" ? escapeHtml(order.rejectReason || "-") : "-"}</div></div>
+            <div><span>Review</span>${order.reviewedAt ? new Date(order.reviewedAt).toLocaleString("fr-FR") : "pending"}</div>
           </div>
           <div class="order-actions">
-            <button type="button" onclick="setOrderStatus('${order.id}', 'accepted')">Accepter</button>
-            <button type="button" class="ghost-button" onclick="setOrderStatus('${order.id}', 'rejected')">Refuser</button>
-            <button type="button" class="ghost-button" onclick="deleteOrder('${order.id}')">Supprimer</button>
+            <button type="button" onclick="setOrderStatus('${order.id}', 'accepted')">Accept</button>
+            ${isAccount ? `<button type="button" class="ghost-button" onclick="deliverAccount('${order.id}')">Deliver account</button>` : ""}
+            ${canDeliverScript ? `<button type="button" class="ghost-button" onclick="deliverScript('${order.id}')">Deliver script</button>` : ""}
+            <button type="button" class="ghost-button" onclick="setOrderStatus('${order.id}', 'rejected')">Reject</button>
+            <button type="button" class="ghost-button" onclick="deleteOrder('${order.id}')">Delete</button>
           </div>
         </article>
-      `).join("");
+      `;
+      }).join("");
     }
 
-    function renderPage() {
+    async function loadSharedOrders() {
+      try {
+        if (!window.shopData?.loadOrders) return;
+        const orders = await window.shopData.loadOrders();
+        localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+        if (window.shopData?.loadKeys) {
+          const keys = await window.shopData.loadKeys();
+          localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+        }
+        if (window.shopData?.loadProducts) {
+          const products = await window.shopData.loadProducts(getProducts());
+          localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+        }
+      } catch {
+      }
+    }
+
+    async function renderPage() {
       const allowed = isAdmin();
-      document.querySelector("#accessBadge").textContent = allowed ? "admin actif" : "acces bloque";
+      document.querySelector("#accessBadge").textContent = allowed ? "admin active" : "access blocked";
       document.querySelector("#accessDenied").hidden = allowed;
       document.querySelector("#adminOrdersPanel").hidden = !allowed;
-      if (allowed) renderOrders();
+      if (allowed) {
+        await loadSharedOrders();
+        renderOrders();
+      }
     }
 
     document.querySelector("#adminOrderSearchInput").addEventListener("input", (event) => {
@@ -291,9 +514,12 @@
       renderOrders();
     });
 
+    document.querySelector("#adminOrderClearAll").addEventListener("click", clearAllOrders);
+
     renderPage();
     window.addEventListener("gmail-auth-change", renderPage);
     window.addEventListener("storage", renderPage);
+    window.addEventListener("shop-data-ready", renderPage);
   </script>
 </body>
 </html>

@@ -21,6 +21,7 @@
     .admin-shop-form label { color: #98a6ba; font-weight: 900; font-size: 0.82rem; text-transform: uppercase; }
     .admin-shop-check { display: flex; align-items: center; gap: 10px; color: #dce5ff; font-weight: 900; }
     .admin-shop-form .account-input { background: rgba(5, 9, 18, 0.82) !important; border: 1px solid rgba(97, 240, 255, 0.2) !important; color: #f7fbff !important; }
+    .admin-shop-form textarea.account-input { min-height: 150px; padding: 12px 14px; resize: vertical; font-family: Consolas, "Cascadia Code", monospace; line-height: 1.45; }
     .admin-shop-actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .admin-shop-actions button,
     .admin-shop-actions .ghost-button { flex: 0 0 auto; min-width: 132px; }
@@ -35,6 +36,7 @@
 <body>
   <main class="app-shell">
     <nav class="top-nav">
+      <a class="page-link discord-link" href="https://discord.gg/CGWWNs9c5S" target="_blank" rel="noopener">Discord</a>
       <a class="page-link" href="store.html">Shop</a>
       <a class="page-link" href="orders.html">My Orders</a>
       <a class="page-link" href="adminOrders.html">Admin Orders</a>
@@ -46,56 +48,67 @@
 
     <section class="admin-shop-head">
       <div>
-        <p class="eyebrow">Validation et produits</p>
+        <p class="eyebrow">Validation and products</p>
         <h1>Admin Shop</h1>
       </div>
-      <span id="accessBadge" class="history-pill">verification</span>
+      <span id="accessBadge" class="history-pill">checking</span>
     </section>
 
-    <section id="accessDenied" class="panel access-denied" hidden>Acces admin requis. Connecte-toi avec le Gmail admin.</section>
+    <section id="accessDenied" class="panel access-denied" hidden>Admin access required. Sign in with the admin Gmail.</section>
 
     <section id="adminShopPanel" class="admin-shop-grid" hidden>
       <section class="panel">
         <div class="share-header">
-          <h2>Nouveau produit</h2>
+          <h2>New product</h2>
           <span class="history-pill">shop</span>
         </div>
-        <p class="admin-shop-help">Pour vendre des keys : cree un produit, coche "Produit de type key", puis va dans Admin Keys pour generer les keys.</p>
+        <p class="admin-shop-help">Create products as files, keys, accounts, or scripts. Script products are delivered with a Roblox location and script class when you accept the order.</p>
         <div class="admin-shop-card">
           <div class="admin-shop-form">
-            <label>Nom</label>
+            <label>Name</label>
             <input id="newProductName" class="account-input" type="text" placeholder="ex: Pack Key">
-            <label>Prix</label>
+            <label>Price</label>
             <input id="newProductPrice" class="account-input" type="number" min="0" step="0.01" value="4.99">
-            <label>Prix Robux</label>
+            <label>Robux price</label>
             <input id="newProductRobuxPrice" class="account-input" type="number" min="0" step="1" value="1000">
             <label>Stock</label>
             <input id="newProductStock" class="account-input" type="text" value="10 in stock">
-            <label>Lien Robux</label>
+            <label>Robux link</label>
             <input id="newProductLink" class="account-input" type="url" value="https://www.roblox.com/fr/game-pass/1862510568/1000">
             <label>Reward file</label>
             <input id="newProductReward" class="account-input" type="text" value="rewards/[] Adopt Me! (Decompile).rbxl">
-            <label>Type key livre</label>
+            <label>Product image URL</label>
+            <input id="newProductImage" class="account-input" type="url" placeholder="https://.../image.png">
+            <label>Type</label>
+            <select id="newProductFulfillment" class="account-input">
+              <option value="file">Reward file</option>
+              <option value="key">25-character key</option>
+              <option value="account">Accounts / credentials</option>
+              <option value="script">Script delivery</option>
+            </select>
+            <label>Delivered key type</label>
             <input id="newProductKeyType" class="account-input" type="text" value="MadeIcon" placeholder="ex: MadeIcon">
+            <label>Script location</label>
+            <input id="newProductScriptLocation" class="account-input" type="text" placeholder="optional, ex: ReplicatedStorage">
+            <label>Script class</label>
+            <input id="newProductScriptClass" class="account-input" type="text" placeholder="optional, ex: ModuleScript">
+            <label>Script code</label>
+            <textarea id="newProductScriptContent" class="account-input" placeholder="Paste the script you sell here"></textarea>
           </div>
           <label class="admin-shop-check">
-            <input id="newProductIsKey" type="checkbox">
-            Produit de type key
-          </label>
-          <label class="admin-shop-check">
             <input id="newProductMultiple" type="checkbox">
-            Achetable plusieurs fois seulement via PayPal / carte
+            Can be bought multiple times only through PayPal / card
           </label>
           <div class="admin-shop-actions">
-            <button type="button" onclick="addProduct()">Ajouter le produit</button>
-            <a class="ghost-button" href="adminKeys.html">Generer des keys</a>
+            <button type="button" onclick="addProduct()">Add product</button>
+            <a class="ghost-button" href="adminKeys.html">Generate keys</a>
           </div>
         </div>
       </section>
 
       <section class="panel">
         <div class="share-header">
-          <h2>Produits</h2>
+          <h2>Products</h2>
           <span id="productsCount" class="history-pill">0 products</span>
         </div>
         <div id="productsBoard" class="admin-shop-board"></div>
@@ -104,6 +117,11 @@
   </main>
 
   <script type="module" src="firebase-auth.js"></script>
+  <script type="module">
+    import * as shopData from "./shop-data.js";
+    window.shopData = shopData;
+    window.dispatchEvent(new Event("shop-data-ready"));
+  </script>
   <script src="auth-fallback.js"></script>
   <script>
     const STORE_PRODUCTS_KEY = "lusive-store-products";
@@ -111,8 +129,7 @@
     const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const EMAIL_VERIFIED_KEY = "lusive-email-verified";
     const ADMIN_EMAIL = "solarydigix@gmail.com";
-    const STOCK_WEBHOOK_URL = "https://discord.com/api/webhooks/1518797975755948114/YrvgMgDxNXf3kMXSCv5zd0Mx_W-gAmguThaJen42Y0h8_baASjWccvXpQ_XSGSPVC0X2";
-    const NEW_PRODUCT_WEBHOOK_URL = "https://discord.com/api/webhooks/1518798167016079500/YUJGsPeYrvIJGerYkks_w5Tlp0mIg_pRy7gOI4xFaIFF1VwpeNL63HA-w1TTPCSvOYyX";
+    const ADMIN_SHOP_WEBHOOK_ENDPOINT = "https://skylixfm-shop.solarydigix.workers.dev/admin-shop";
     const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 
     const defaultRobloxLink = "https://www.roblox.com/fr/game-pass/1862510568/1000";
@@ -128,7 +145,7 @@
       { id: "monthly-key", name: "Monthly Key", price: 14.99, robuxPrice: 2500, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" },
       { id: "lifetime-key", name: "Lifetime Key", price: 29.99, robuxPrice: 5000, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "key" },
       { id: "bundle-keys", name: "Bundle 5 Keys", price: 11.99, robuxPrice: 1800, stock: "Out of stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: true, fulfillment: "key" },
-      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "file" },
+      { id: "custom-script", name: "Custom Script Pack", price: 24.99, robuxPrice: 3500, stock: "25 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "script", scriptLocation: "ReplicatedStorage", scriptClass: "ModuleScript", scriptContent: "-- Paste your delivered script here" },
       { id: "source-pack", name: "Source Pack", price: 12.99, robuxPrice: 1900, stock: "40 in stock", robloxLink: defaultRobloxLink, rewardFile: defaultRewardFile, allowMultiple: false, fulfillment: "file" }
     ];
 
@@ -151,9 +168,13 @@
             robloxLink: product.robloxLink || fallback.robloxLink || defaultRobloxLink,
             rewardFile: product.rewardFile || fallback.rewardFile || defaultRewardFile,
             robuxPrice: Math.max(0, Number(product.robuxPrice ?? fallback.robuxPrice ?? 0)),
-            fulfillment: (product.fulfillment || fallback.fulfillment) === "key" ? "key" : "file",
+            fulfillment: ["key", "account", "script"].includes(product.fulfillment || fallback.fulfillment) ? (product.fulfillment || fallback.fulfillment) : "file",
             allowMultiple: Boolean(product.allowMultiple),
-            keyType: product.keyType || fallback.keyType || "Key"
+            keyType: product.keyType || fallback.keyType || "Key",
+            scriptLocation: product.scriptLocation ?? fallback.scriptLocation ?? "",
+            scriptClass: product.scriptClass ?? fallback.scriptClass ?? "",
+            scriptContent: product.scriptContent || fallback.scriptContent || "",
+            imageUrl: product.imageUrl ?? fallback.imageUrl ?? ""
             };
           });
           const existingIds = new Set(normalized.map((product) => product.id));
@@ -183,6 +204,16 @@
 
     function saveProducts(products) {
       localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+      window.shopData?.saveProducts?.(products).catch(() => {});
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     function stockCount(stock) {
@@ -190,8 +221,8 @@
       return match ? Number(match[0]) : 0;
     }
 
-    function notifyWebhook(url, payload) {
-      fetch(url, {
+    function notifyWebhook(payload) {
+      fetch(ADMIN_SHOP_WEBHOOK_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -199,37 +230,18 @@
     }
 
     function notifyStockIncrease(product, oldStock, newStock) {
-      notifyWebhook(STOCK_WEBHOOK_URL, {
-        content: `Stock ajoute: ${product.name}`,
-        embeds: [{
-          title: "Stock mis a jour",
-          color: 0x61f0ff,
-          fields: [
-            { name: "Produit", value: product.name || product.id, inline: false },
-            { name: "Ancien stock", value: String(oldStock), inline: true },
-            { name: "Nouveau stock", value: String(newStock), inline: true },
-            { name: "Difference", value: `+${newStock - oldStock}`, inline: true }
-          ],
-          timestamp: new Date().toISOString()
-        }]
+      notifyWebhook({
+        type: "stock",
+        product,
+        oldStock,
+        newStock
       });
     }
 
     function notifyNewProduct(product) {
-      notifyWebhook(NEW_PRODUCT_WEBHOOK_URL, {
-        content: `Nouveau produit: ${product.name}`,
-        embeds: [{
-          title: "Nouveau produit boutique",
-          color: 0x61f0ff,
-          fields: [
-            { name: "Produit", value: product.name || product.id, inline: false },
-            { name: "Prix", value: money.format(Number(product.price || 0)), inline: true },
-            { name: "Robux", value: `${Number(product.robuxPrice || 0)} R$`, inline: true },
-            { name: "Stock", value: product.stock || "-", inline: true },
-            { name: "Type", value: product.fulfillment === "key" ? `Key (${product.keyType || "Key"})` : "Fichier", inline: true }
-          ],
-          timestamp: new Date().toISOString()
-        }]
+      notifyWebhook({
+        type: "new-product",
+        product
       });
     }
 
@@ -245,13 +257,20 @@
           stock: document.querySelector(`[data-product-stock="${id}"]`).value.trim() || "Out of stock",
           robloxLink: document.querySelector(`[data-product-link="${id}"]`).value.trim() || defaultRobloxLink,
           rewardFile: document.querySelector(`[data-product-reward="${id}"]`).value.trim() || defaultRewardFile,
-          fulfillment: document.querySelector(`[data-product-fulfillment="${id}"]`).value === "key" ? "key" : "file",
+          imageUrl: document.querySelector(`[data-product-image="${id}"]`).value.trim(),
+          fulfillment: ["key", "account", "script"].includes(document.querySelector(`[data-product-fulfillment="${id}"]`).value) ? document.querySelector(`[data-product-fulfillment="${id}"]`).value : "file",
           keyType: document.querySelector(`[data-product-key-type="${id}"]`).value.trim() || "Key",
+          scriptLocation: document.querySelector(`[data-product-script-location="${id}"]`).value.trim(),
+          scriptClass: document.querySelector(`[data-product-script-class="${id}"]`).value.trim(),
+          scriptContent: document.querySelector(`[data-product-script-content="${id}"]`).value,
           allowMultiple: document.querySelector(`[data-product-multiple="${id}"]`).checked
         };
       });
       saveProducts(products);
       const after = products.find((product) => product.id === id);
+      if (after) {
+        window.shopData?.saveProduct?.(after).catch(() => {});
+      }
       const oldStock = stockCount(before?.stock);
       const newStock = stockCount(after?.stock);
       if (after && newStock > oldStock) {
@@ -261,10 +280,10 @@
     }
 
     function createProductId(name) {
-      const base = String(name || "produit").toLowerCase()
+      const base = String(name || "product").toLowerCase()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
-        .slice(0, 28) || "produit";
+        .slice(0, 28) || "product";
       const existing = new Set(getProducts().map((product) => product.id));
       const deleted = getDeletedProductIds();
       let id = base;
@@ -280,7 +299,7 @@
       if (!isAdmin()) return;
       const name = document.querySelector("#newProductName").value.trim();
       if (name.length < 2) {
-        alert("Mets un nom de produit.");
+        alert("Enter a product name.");
         return;
       }
       const product = {
@@ -291,23 +310,31 @@
         stock: document.querySelector("#newProductStock").value.trim() || "Out of stock",
         robloxLink: document.querySelector("#newProductLink").value.trim() || defaultRobloxLink,
         rewardFile: document.querySelector("#newProductReward").value.trim() || defaultRewardFile,
-        fulfillment: document.querySelector("#newProductIsKey").checked ? "key" : "file",
+        imageUrl: document.querySelector("#newProductImage").value.trim(),
+        fulfillment: ["key", "account", "script"].includes(document.querySelector("#newProductFulfillment").value) ? document.querySelector("#newProductFulfillment").value : "file",
         keyType: document.querySelector("#newProductKeyType").value.trim() || "Key",
+        scriptLocation: document.querySelector("#newProductScriptLocation").value.trim(),
+        scriptClass: document.querySelector("#newProductScriptClass").value.trim(),
+        scriptContent: document.querySelector("#newProductScriptContent").value,
         allowMultiple: document.querySelector("#newProductMultiple").checked
       };
       saveProducts([product, ...getProducts()]);
+      window.shopData?.saveProduct?.(product).catch(() => {});
       notifyNewProduct(product);
       document.querySelector("#newProductName").value = "";
+      document.querySelector("#newProductImage").value = "";
+      document.querySelector("#newProductScriptContent").value = "";
       renderAdminShop();
     }
 
     function deleteProduct(id) {
       if (!isAdmin()) return;
-      if (!confirm("Supprimer ce produit ?")) return;
+      if (!confirm("Delete this product?")) return;
       const deleted = getDeletedProductIds();
       deleted.add(id);
       saveDeletedProductIds(deleted);
       saveProducts(getProducts().filter((product) => product.id !== id));
+      window.shopData?.deleteProduct?.(id).catch(() => {});
       renderAdminShop();
     }
 
@@ -322,43 +349,66 @@
             <span class="history-pill">${product.id}</span>
           </div>
           <div class="admin-shop-form">
-            <label>Prix</label>
+            <label>Price</label>
             <input class="account-input" data-product-price="${product.id}" type="number" min="0" step="0.01" value="${product.price}">
-            <label>Prix Robux</label>
+            <label>Robux price</label>
             <input class="account-input" data-product-robux-price="${product.id}" type="number" min="0" step="1" value="${product.robuxPrice || 0}">
             <label>Stock</label>
             <input class="account-input" data-product-stock="${product.id}" type="text" value="${product.stock || ""}">
-            <label>Lien Robux</label>
+            <label>Robux link</label>
             <input class="account-input" data-product-link="${product.id}" type="url" value="${product.robloxLink || defaultRobloxLink}">
             <label>Reward file</label>
             <input class="account-input" data-product-reward="${product.id}" type="text" value="${product.rewardFile || defaultRewardFile}" placeholder="ex: rewards/item.rblx">
+            <label>Product image URL</label>
+            <input class="account-input" data-product-image="${product.id}" type="url" value="${escapeHtml(product.imageUrl || "")}" placeholder="https://.../image.png">
             <label>Type</label>
             <select class="account-input" data-product-fulfillment="${product.id}">
-              <option value="file" ${product.fulfillment !== "key" ? "selected" : ""}>Fichier reward</option>
-              <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>Key 15 caracteres</option>
+              <option value="file" ${!["key", "account", "script"].includes(product.fulfillment) ? "selected" : ""}>Reward file</option>
+              <option value="key" ${product.fulfillment === "key" ? "selected" : ""}>25-character key</option>
+              <option value="account" ${product.fulfillment === "account" ? "selected" : ""}>Accounts / credentials</option>
+              <option value="script" ${product.fulfillment === "script" ? "selected" : ""}>Script delivery</option>
             </select>
-            <label>Type key livre</label>
+            <label>Delivered key type</label>
             <input class="account-input" data-product-key-type="${product.id}" type="text" value="${product.keyType || "Key"}" placeholder="ex: MadeIcon">
+            <label>Script location</label>
+            <input class="account-input" data-product-script-location="${product.id}" type="text" value="${escapeHtml(product.scriptLocation || "")}" placeholder="optional, ex: ReplicatedStorage">
+            <label>Script class</label>
+            <input class="account-input" data-product-script-class="${product.id}" type="text" value="${escapeHtml(product.scriptClass || "")}" placeholder="optional, ex: ModuleScript">
+            <label>Script code</label>
+            <textarea class="account-input" data-product-script-content="${product.id}" placeholder="Paste the script you sell here">${escapeHtml(product.scriptContent || "")}</textarea>
           </div>
           <label class="admin-shop-check">
             <input data-product-multiple="${product.id}" type="checkbox" ${product.allowMultiple ? "checked" : ""}>
-            Achetable plusieurs fois seulement via PayPal / carte
+            Can be bought multiple times only through PayPal / card
           </label>
           <div class="admin-shop-actions">
-            <button type="button" onclick="saveProduct('${product.id}')">Sauvegarder</button>
-            <button class="ghost-button" type="button" onclick="deleteProduct('${product.id}')">Supprimer</button>
-            ${product.fulfillment === "key" ? `<a class="ghost-button" href="adminKeys.html?product=${encodeURIComponent(product.id)}&type=${encodeURIComponent(product.keyType || "Key")}">Gerer les keys</a>` : ""}
+            <button type="button" onclick="saveProduct('${product.id}')">Save</button>
+            <button class="ghost-button" type="button" onclick="deleteProduct('${product.id}')">Delete</button>
+            ${product.fulfillment === "key" ? `<a class="ghost-button" href="adminKeys.html?product=${encodeURIComponent(product.id)}&type=${encodeURIComponent(product.keyType || "Key")}">Manage keys</a>` : ""}
           </div>
         </article>
       `).join("");
     }
 
-    function renderAdminShop() {
+    async function loadSharedProducts() {
+      try {
+        if (!window.shopData?.loadProducts) return;
+        const localProducts = getProducts();
+        const products = window.shopData.seedProducts
+          ? await window.shopData.seedProducts(localProducts.length ? localProducts : defaultProducts)
+          : await window.shopData.loadProducts(defaultProducts);
+        localStorage.setItem(STORE_PRODUCTS_KEY, JSON.stringify(products));
+      } catch {
+      }
+    }
+
+    async function renderAdminShop() {
       const allowed = isAdmin();
-      document.querySelector("#accessBadge").textContent = allowed ? "admin actif" : "acces bloque";
+      document.querySelector("#accessBadge").textContent = allowed ? "admin active" : "access blocked";
       document.querySelector("#accessDenied").hidden = allowed;
       document.querySelector("#adminShopPanel").hidden = !allowed;
       if (!allowed) return;
+      await loadSharedProducts();
       renderProducts();
     }
 
