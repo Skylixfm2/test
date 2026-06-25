@@ -3,7 +3,9 @@
     "lusive-customer-email",
     "lusive-customer-pseudo",
     "lusive-email-verified",
-    "lusive-firebase-uid"
+    "lusive-firebase-uid",
+    "lusive-password-ok",
+    "lusive-pending-account"
   ];
 
   function resetAuth() {
