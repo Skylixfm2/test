@@ -275,9 +275,7 @@ function renderGmailAuth() {
       <form class="gmail-auth-form">
         <input class="gmail-pseudo-input" type="text" value="${pseudo}" placeholder="Username" autocomplete="nickname" maxlength="32">
         <input class="gmail-password-input" type="password" placeholder="Password" autocomplete="current-password" minlength="6">
-        <input class="gmail-email-input" type="email" value="${email}" placeholder="Email" autocomplete="email">
-        <button class="gmail-send-email" type="button">Create / sign in</button>
-        <button class="gmail-google-login ghost-button" type="button">Use Google</button>
+        <button class="gmail-google-login" type="button">Create / sign in with Google</button>
         <div class="gmail-auth-codes"></div>
         <div class="gmail-auth-error"></div>
       </form>
@@ -286,46 +284,10 @@ function renderGmailAuth() {
     const form = container.querySelector(".gmail-auth-form");
     const pseudoInput = container.querySelector(".gmail-pseudo-input");
     const passwordInput = container.querySelector(".gmail-password-input");
-    const emailInput = container.querySelector(".gmail-email-input");
     const status = container.querySelector(".gmail-auth-codes");
     const error = container.querySelector(".gmail-auth-error");
 
-    const submitButton = container.querySelector(".gmail-send-email");
     const googleButton = container.querySelector(".gmail-google-login");
-
-    submitButton.addEventListener("click", async () => {
-      error.textContent = "";
-      status.textContent = "";
-      const nextPseudo = pseudoInput.value.trim();
-      const nextEmail = normalizeGmail(emailInput.value);
-      if (nextPseudo.length < 2) {
-        error.textContent = "Choose a username.";
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(nextEmail)) {
-        error.textContent = "Enter a valid email.";
-        return;
-      }
-      if (passwordInput.value.length < 6) {
-        error.textContent = "Choose a password with at least 6 characters.";
-        return;
-      }
-      try {
-        submitButton.disabled = true;
-        status.textContent = "Checking account and sending verification email...";
-        await signInWithSiteAccount(nextPseudo, nextEmail, passwordInput.value);
-        status.textContent = "Account connected.";
-        renderGmailAuth();
-      } catch (err) {
-        if (err.message === "VERIFICATION_SENT") {
-          status.textContent = "Verification email sent. Open the Firebase link in your mailbox, then sign in again.";
-        } else {
-          error.textContent = `Sign in error: ${err.code || err.message}`;
-        }
-      } finally {
-        submitButton.disabled = false;
-      }
-    });
 
     googleButton.addEventListener("click", async () => {
       error.textContent = "";
@@ -353,7 +315,7 @@ function renderGmailAuth() {
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      container.querySelector(".gmail-send-email").click();
+      googleButton.click();
     });
 
   });
