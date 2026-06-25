@@ -184,7 +184,17 @@ async function signInWithGoogle(pseudo, password) {
     return { user: auth.currentUser };
   }
   try {
-    return await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider);
+    if (result?.user?.email) {
+      const email = normalizeGmail(result.user.email);
+      await confirmLocalAccount(email, pseudo, passwordHash);
+      localStorage.setItem(CUSTOMER_EMAIL_KEY, email);
+      localStorage.setItem(EMAIL_VERIFIED_KEY, "true");
+      localStorage.setItem(FIREBASE_UID_KEY, result.user.uid);
+      localStorage.removeItem(PENDING_ACCOUNT_KEY);
+      dispatchAuthChange();
+    }
+    return result;
   } catch (error) {
     if (error.code === "auth/popup-blocked" || error.code === "auth/popup-closed-by-user") {
       await signInWithRedirect(auth, googleProvider);
