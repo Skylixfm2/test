@@ -150,8 +150,7 @@
     ];
 
     function isAdmin() {
-      return localStorage.getItem(EMAIL_VERIFIED_KEY) === "true"
-        && String(localStorage.getItem(CUSTOMER_EMAIL_KEY) || "").trim().toLowerCase() === ADMIN_EMAIL;
+      return Boolean(window.gmailAuth?.isAdmin?.());
     }
 
     function getProducts() {

@@ -158,7 +158,8 @@ function isFullyVerified() {
 }
 
 function isAdmin() {
-  return isFullyVerified() && getCustomerEmail() === ADMIN_EMAIL;
+  const firebaseEmail = normalizeGmail(auth.currentUser?.email);
+  return isFullyVerified() && firebaseEmail === ADMIN_EMAIL && getCustomerEmail() === ADMIN_EMAIL;
 }
 
 function updateAdminVisibility() {
@@ -366,6 +367,13 @@ onAuthStateChanged(auth, (user) => {
   }
   if (user?.email) {
     const email = normalizeGmail(user.email);
+    const storedEmail = getCustomerEmail();
+    if (storedEmail && storedEmail !== email) {
+      localStorage.removeItem(CUSTOMER_EMAIL_KEY);
+      localStorage.removeItem(CUSTOMER_PSEUDO_KEY);
+      localStorage.removeItem(PASSWORD_OK_KEY);
+      localStorage.setItem(EMAIL_VERIFIED_KEY, "false");
+    }
     const pending = JSON.parse(localStorage.getItem(PENDING_ACCOUNT_KEY) || "null");
     if (pending?.passwordHash) {
       confirmLocalAccount(email, pending.pseudo, pending.passwordHash)
