@@ -267,6 +267,7 @@
     let selectedProduct = null;
     let selectedPaymentProvider = "Roblox";
     let activeShopFilter = "all";
+    let ordersUnsubscribe = null;
 
     function normalizeEmail(email) {
       return String(email || "").trim().toLowerCase();
@@ -751,6 +752,15 @@
       await loadSharedShopData();
       renderProducts();
       renderShopStats();
+      startRealtimeStats();
+    }
+
+    function startRealtimeStats() {
+      if (ordersUnsubscribe || !window.shopData?.subscribeOrders) return;
+      ordersUnsubscribe = window.shopData.subscribeOrders((orders) => {
+        localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+        renderShopStats();
+      });
     }
 
     initShop();

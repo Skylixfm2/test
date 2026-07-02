@@ -70,6 +70,7 @@
     const STORE_ORDERS_KEY = "lusive-store-orders";
     const CUSTOMER_EMAIL_KEY = "lusive-customer-email";
     const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+    let ordersUnsubscribe = null;
 
     function normalizeEmail(email) {
       return String(email || "").trim().toLowerCase();
@@ -190,6 +191,15 @@
     async function initOrders() {
       await loadSharedOrders();
       renderOrders();
+      startRealtimeSync();
+    }
+
+    function startRealtimeSync() {
+      if (ordersUnsubscribe || !window.shopData?.subscribeOrders) return;
+      ordersUnsubscribe = window.shopData.subscribeOrders((orders) => {
+        localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+        renderOrders();
+      });
     }
 
     initOrders();

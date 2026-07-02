@@ -5,6 +5,7 @@ import {
   doc,
   getDocs,
   getFirestore,
+  onSnapshot,
   setDoc
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
@@ -90,6 +91,15 @@ export async function loadOrders() {
   return remote.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 }
 
+export function subscribeOrders(callback) {
+  return onSnapshot(collection(db, "orders"), (snap) => {
+    const orders = snap.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+    callback(orders);
+  });
+}
+
 export async function saveOrder(order) {
   await setDoc(doc(db, "orders", String(order.id)), clean(order));
 }
@@ -106,6 +116,15 @@ export async function clearOrders() {
 export async function loadKeys() {
   const remote = await readCollection("keys");
   return remote.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+}
+
+export function subscribeKeys(callback) {
+  return onSnapshot(collection(db, "keys"), (snap) => {
+    const keys = snap.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+    callback(keys);
+  });
 }
 
 export async function saveKeys(keys) {

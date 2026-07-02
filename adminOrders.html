@@ -78,6 +78,8 @@
     const ADMIN_ORDER_WEBHOOK_ENDPOINT = "https://skylixfm-shop.solarydigix.workers.dev/admin-order";
     const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
     let orderSearch = "";
+    let ordersUnsubscribe = null;
+    let keysUnsubscribe = null;
 
     function isAdmin() {
       return localStorage.getItem(EMAIL_VERIFIED_KEY) === "true"
@@ -497,9 +499,30 @@
       document.querySelector("#accessBadge").textContent = allowed ? "admin active" : "access blocked";
       document.querySelector("#accessDenied").hidden = allowed;
       document.querySelector("#adminOrdersPanel").hidden = !allowed;
+      if (!allowed) {
+        if (ordersUnsubscribe) ordersUnsubscribe();
+        if (keysUnsubscribe) keysUnsubscribe();
+        ordersUnsubscribe = null;
+        keysUnsubscribe = null;
+        return;
+      }
       if (allowed) {
         await loadSharedOrders();
         renderOrders();
+        startRealtimeSync();
+      }
+    }
+
+    function startRealtimeSync() {
+      if (ordersUnsubscribe || !window.shopData?.subscribeOrders) return;
+      ordersUnsubscribe = window.shopData.subscribeOrders((orders) => {
+        localStorage.setItem(STORE_ORDERS_KEY, JSON.stringify(orders));
+        renderOrders();
+      });
+      if (window.shopData?.subscribeKeys) {
+        keysUnsubscribe = window.shopData.subscribeKeys((keys) => {
+          localStorage.setItem(STORE_KEYS_KEY, JSON.stringify(keys));
+        });
       }
     }
 
