@@ -393,6 +393,7 @@
     async function loadSharedProducts() {
       try {
         if (!window.shopData?.loadProducts) return;
+        await window.shopData?.deleteDeprecatedProducts?.();
         const localProducts = getProducts();
         const products = window.shopData.seedProducts
           ? await window.shopData.seedProducts(localProducts.length ? localProducts : defaultProducts)

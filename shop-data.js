@@ -81,6 +81,10 @@ export async function deleteProduct(id) {
   await deleteDoc(doc(db, "products", String(id)));
 }
 
+export async function deleteDeprecatedProducts() {
+  await Promise.all([...deprecatedProductIds].map((id) => deleteDoc(doc(db, "products", id))));
+}
+
 export async function loadOrders() {
   const remote = await readCollection("orders");
   return remote.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
